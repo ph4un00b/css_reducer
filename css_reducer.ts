@@ -17,38 +17,49 @@ type Options = {
   order_default?: boolean;
   order_tailwind?: boolean;
   windi_shortcuts?: boolean;
+  output_file?: string;
 };
 
 const _CLASSES_REGEX = /class="\s*([a-z:A-Z\s\-\[\#\d\.\%\]]+)\s*"/g;
 
 export function css_reducer_sync(
-  html: string,
+  filename: string,
   namer: Namer | undefined,
-  { order_default = true, windi_shortcuts = false }: Options = {}
+  { order_default = true, windi_shortcuts = false, output_file }: Options = {},
 ) {
-  const _DATA_: string[][] = _matcher_sync(html, order_default, namer);
-  if (windi_shortcuts) {
-    _create_windi_shortcuts(_DATA_);
-    return _DATA_;
+  const filepath = path.join(Deno.cwd(), filename);
+  const html = Deno.readTextFileSync(filepath);
+  const result = _matcher_sync(html, order_default, namer);
+
+  if (output_file) {
+    Deno.writeTextFileSync(output_file, result.html);
+  } else {
+    Deno.writeTextFileSync(filename, result.html);
   }
-  return _DATA_;
+
+  if (windi_shortcuts) {
+    _create_windi_shortcuts(result.data);
+    return result.data;
+  }
+
+  return result.data;
 }
 
-function _matcher_sync(
-  html: string,
-  order_default: boolean,
-  namer?: Namer
-) {
+function _matcher_sync(html: string, order_default: boolean, namer?: Namer) {
   const FRAME = 300;
   const _DATA_: string[][] = [];
+  let begin_html_pointer = 0;
+  let new_name_class;
+  const new_html: string[] = [];
   for (const match of _match_classes(html, _CLASSES_REGEX)) {
-    // console.log(">>>>>>>> ",brightRed(match.result))
+    new_html.push(html.substring(begin_html_pointer, match.start));
     let group = match.result.trim();
     if (order_default) {
       group = _sort_classes_list(group).join(" ");
     }
+
     const hash: string = _simple_hash(group);
-    console.clear();
+    console.clear(); // remove for testing logging
 
     if (namer) {
       if (match.start > FRAME) {
@@ -59,14 +70,19 @@ function _matcher_sync(
 
       l(brightGreen(html.substring(match.start, match.end)));
       l(html.substring(match.end, match.end + FRAME));
-      const name = namer() ?? "";
+      new_name_class = namer() ?? "";
 
-      _DATA_.push([name, group]);
+      _DATA_.push([new_name_class, group]);
     } else {
       _DATA_.push([hash, group]);
     }
+
+    new_html.push([new_name_class ?? hash].join(" "));
+    begin_html_pointer = match.end;
   }
-  return _DATA_;
+  new_html.push(html.substring(begin_html_pointer));
+
+  return { data: _DATA_, html: new_html.join("") };
 }
 
 function l(s: string) {
@@ -77,7 +93,7 @@ function l(s: string) {
 export async function css_reducer(
   fileReader: Deno.File,
   namer: Namer | undefined,
-  { order_default = true, windi_shortcuts = false }: Options = {}
+  { order_default = true, windi_shortcuts = false, output_file }: Options = {},
 ) {
   let line_buffer = [];
   // _NAME_ just to spot quickly the data
@@ -108,6 +124,13 @@ export async function css_reducer(
     }
   }
 
+  // todo
+  if (output_file) {
+    // Deno.writeTextFileSync(output_file, result.html);
+  } else {
+    // Deno.writeTextFileSync(filename, result.html);
+  }
+
   if (windi_shortcuts) {
     _create_windi_shortcuts(_DATA_);
     return _DATA_;
@@ -119,7 +142,7 @@ function _matcher(
   html: string,
   namer: Namer | undefined,
   cache: { [key: string]: string } = {},
-  { order_default = true }: Options = {}
+  { order_default = true }: Options = {},
 ) {
   // todo: not the best regex I bet
   const css = html.matchAll(_CLASSES_REGEX);
@@ -146,7 +169,7 @@ function _name(
   group: string,
   hash: string,
   cache: { [key: string]: string },
-  namer: Namer
+  namer: Namer,
 ) {
   // todo: do something better for green log
   // _naming_logs(html, group, hash, cache);
@@ -158,18 +181,18 @@ function _naming_logs(
   html: string,
   group: string,
   hash: string,
-  cache: { [key: string]: string }
+  cache: { [key: string]: string },
 ) {
   const init = html.indexOf(group);
   const end = html.indexOf('"', html.indexOf(group, +1));
   if (hash in cache) {
     console.log(
-      brightRed("Already in shorcuts as: ") + bgBlack(inverse(cache[hash]))
+      brightRed("Already in shorcuts as: ") + bgBlack(inverse(cache[hash])),
     );
   }
 
   console.log(
-    html.slice(0, init) + brightGreen(html.slice(init, end)) + html.slice(end)
+    html.slice(0, init) + brightGreen(html.slice(init, end)) + html.slice(end),
   );
 }
 
@@ -188,6 +211,6 @@ function _create_windi_shortcuts(classes: string[][]) {
 
   Deno.writeTextFileSync(
     path.join(Deno.cwd(), "shortcuts.json"),
-    JSON.stringify(shotcuts, undefined, 2)
+    JSON.stringify(shotcuts, undefined, 2),
   );
 }

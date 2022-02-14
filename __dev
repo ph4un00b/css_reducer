@@ -1,0 +1,92 @@
+<body class="1pwdgta">
+    <!-- <div id="id">0ybFZ2Ab08V8hueghSXm6E</div> -->
+    <!-- <div id="name" class="m8onlr">Opeth</div> -->
+    <main class="">
+        <section class="vwxuvc">
+            <div class=""><kbd
+                    class="9hj02u"><code>shift</code></kbd>+<kbd
+                    class="9hj02u"><code>tab</code></kbd>
+                backward</div>
+            <div class=""><kbd
+                    class="9hj02u"><code>tab</code></kbd>
+                forward</div>
+        </section>
+        <div id="countapp" @vue:mounted="init('ramm')" v-scope="Fuzzy()"
+            class="1668mtl">
+            <!-- <pre v-effect="$el.textContent = entries"></pre> -->
+            <input ref="main_runner" v-if="program === 'main'" placeholder="Type"
+                class="erwy95"
+                type="text" @input="search">
+
+            <input ref="runner" v-else placeholder="Type"
+                class="1r2vyti"
+                type="text" @change="execute">
+
+
+            <!-- <pre>program: {{program}}</pre> -->
+            <section class="fgs58h">
+                <h2 @focus="result_selected = false; store.id = undefined" tabindex="0"
+                    :class="program === 'main' ? 'text-purple-300' : 'text-rose-200'"
+                    v-effect="$el.textContent = `> ${program}`">
+                </h2>
+                <h1 v-if="program === 'main'">select program</h1>
+                <!-- options -->
+                <div v-show="program === 'main'" tabindex="0" @keyup.enter="handle_enter(item)"
+                    v-for="({item, positions}) in entries"
+                    class="a2hca2">
+                    <!-- <pre v-effect="$el.textContent = item"></pre> -->
+                    <!-- highlight -->
+                    <span v-for="(char, pos) in item.split('')">
+                        <b v-if="positions.includes(pos)" v-effect="$el.textContent = char"></b>
+                        <span v-else v-effect="$el.textContent = char"></span>
+                    </span>
+                </div>
+
+                <section v-show="program !== 'main' && !result_selected">
+                    <div class="7j6lfa" v-for="({name, id, genres, images}) in results">
+                        <section @keyup.enter="store.artist_id = id; result_selected = true"
+                            class="1io9zto">
+
+                            <kbd tabindex="0"
+                                class="1t29g2h"><code>enter</code></kbd>
+                            <!-- basic info -->
+                            <section class="4ehd8i">
+                                <img class="2ng8gl" :src="images[0]?.url ?? 'https://www.fillmurray.com/g/200/200'"
+                                    width="70" height="70" alt="">
+                                <section class="1kdt430">
+                                    <strong>{{name}}</strong>
+                                    <i class="1fsjxcq">{{id}}</i>
+                                </section>
+                            </section>
+                            <!-- genres -->
+                            <section class="vp7xu4" v-for="(genre, idx) in genres">
+                                <span class="1krqszm" v-if="idx < 2"
+                                    v-effect="$el.textContent = genre"></span>
+                            </section>
+                        </section>
+                    </div>
+                </section>
+            </section>
+            <!-- <button @click="search('pt')">Increment</button> -->
+
+        </div>
+
+        <article v-if="store.id" id="artista" class="yhkz7l">
+            <h1 v-effect="$el.textContent = store.id"></h1>
+            <h1>{{ store.json.name }}</h1>
+            <div>
+                <img class="112vb5c" :src="store.json.artist_image.url" width="120" height="120" alt="">
+            </div>
+
+            <section class="14o1ml0" id="genres" v-for="item of store.json.artist_genres">
+                <span class="1yz4ldi">{{ item }}</span>
+            </section>
+
+            <h2>{{ store.json.last_album_name }}</h2>
+            <div>
+                <img class="112vb5c" :src="store.json.last_album_image.url" width="160" height="160" alt="">
+            </div>
+        </article>
+    </main>
+    <script type="module" src="main.js"></script>
+</body>
