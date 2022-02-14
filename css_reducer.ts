@@ -8,7 +8,7 @@ import {
   brightRed,
   inverse,
 } from "https://deno.land/std@0.125.0/fmt/colors.ts";
-import { _match_classes, _sort_classes_list } from "./lib.ts";
+import { _match_classes, _simple_hash, _sort_classes_list } from "./lib.ts";
 
 const te = (s: string) => new TextEncoder().encode(s);
 const td = (d: Uint8Array) => new TextDecoder().decode(d);
@@ -21,21 +21,20 @@ type Options = {
 
 const _CLASSES_REGEX = /class="\s*([a-z:A-Z\s\-\[\#\d\.\%\]]+)\s*"/g;
 
-export async function css_reducer_sync(
+export function css_reducer_sync(
   html: string,
   namer: Namer | undefined,
   { order_default = true, windi_shortcuts = false }: Options = {}
 ) {
-  const _DATA_: string[][] = await _matcher_sync(html, order_default, namer);
+  const _DATA_: string[][] = _matcher_sync(html, order_default, namer);
   if (windi_shortcuts) {
     _create_windi_shortcuts(_DATA_);
     return _DATA_;
   }
   return _DATA_;
-  // consaaole.log(html.substring(indexStart));
 }
 
-async function _matcher_sync(
+function _matcher_sync(
   html: string,
   order_default: boolean,
   namer?: Namer
@@ -44,11 +43,11 @@ async function _matcher_sync(
   const _DATA_: string[][] = [];
   for (const match of _match_classes(html, _CLASSES_REGEX)) {
     // console.log(">>>>>>>> ",brightRed(match.result))
-    let group = match.result;
+    let group = match.result.trim();
     if (order_default) {
-      group = _sort_classes_list(match.result).join(" ");
+      group = _sort_classes_list(group).join(" ");
     }
-    const hash: string = await _hash(group);
+    const hash: string = _simple_hash(group);
     console.clear();
 
     if (namer) {
@@ -89,7 +88,7 @@ export async function css_reducer(
     let match;
     if (line_buffer.length > 0) {
       line_buffer.push(line);
-      match = await _matcher(line_buffer.join("\n"), namer, cache, opts);
+      match = _matcher(line_buffer.join("\n"), namer, cache, opts);
 
       if (match) {
         cache = { ...cache, ...match.cache };
@@ -99,7 +98,7 @@ export async function css_reducer(
         line_buffer.push(line);
       }
     } else {
-      match = await _matcher(line, namer, cache, opts);
+      match = _matcher(line, namer, cache, opts);
       if (match) {
         cache = { ...cache, ...match.cache };
         _DATA_.push(match.data);
@@ -116,7 +115,7 @@ export async function css_reducer(
   return _DATA_;
 }
 
-async function _matcher(
+function _matcher(
   html: string,
   namer: Namer | undefined,
   cache: { [key: string]: string } = {},
@@ -128,10 +127,10 @@ async function _matcher(
 
   for (let [_match, group] of css) {
     if (order_default) {
-      group = _sort_classes_list(group).join(" ");
+      group = _sort_classes_list(group.trim()).join(" ");
     }
 
-    const hash: string = await _hash(group);
+    const hash: string = _simple_hash(group);
 
     if (namer) {
       const name = _name(html, group, hash, cache, namer);

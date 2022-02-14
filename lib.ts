@@ -129,15 +129,16 @@ function _getAllSelectors(
 
 // port from windi html parser with some modifications.
 type ClassName = { result: string; start: number; end: number };
-export function _match_classes(html: string, REGEX?:RegExp): ClassName[] {
+export function _match_classes(html: string, REGEX?: RegExp): ClassName[] {
   // Match all class properties
   if (!html) return [];
   const output: ClassName[] = [];
   let regex;
   if (!REGEX) {
-    regex = /class(Name)?\s*=\s*{`[^]+`}|class(Name)?\s*=\s*"[^"]+"|class(Name)?\s*=\s*'[^']+'|class(Name)?\s*=\s*[^>\s]+/gim;
+    regex =
+      /class(Name)?\s*=\s*{`[^]+`}|class(Name)?\s*=\s*"[^"]+"|class(Name)?\s*=\s*'[^']+'|class(Name)?\s*=\s*[^>\s]+/gim;
   } else {
-    regex = REGEX
+    regex = REGEX;
   }
   let match;
   while ((match = regex.exec(html as string))) {
@@ -161,4 +162,14 @@ export function _match_classes(html: string, REGEX?:RegExp): ClassName[] {
     }
   }
   return output;
+}
+
+// from windi
+export function _simple_hash(str: string): string {
+  str = str.replace(/\r/g, "");
+  let hash = 5381;
+  let i = str.length;
+
+  while (i--) hash = ((hash << 5) - hash) ^ str.charCodeAt(i);
+  return (hash >>> 0).toString(36);
 }
