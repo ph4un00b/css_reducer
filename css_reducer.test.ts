@@ -1,6 +1,6 @@
 import { assertEquals } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import * as path from "https://deno.land/std@0.125.0/path/mod.ts";
-import { css_reducer, Namer } from "./css_reducer.ts";
+import { css_reducer, css_reducer_sync, Namer } from "./css_reducer.ts";
 
 async function from_file(
   filepath: string,
@@ -18,6 +18,20 @@ async function from_file(
   return classes;
 }
 
+async function from_file_sync(
+  filepath: string,
+  order_default = false,
+  fn: undefined | Namer = undefined,
+  windi_shortcuts = false,
+) {
+  const filename = path.join(Deno.cwd(), filepath);
+  const text = Deno.readTextFileSync(filename);
+  const classes = await css_reducer_sync(text, fn, {
+    order_default,
+    windi_shortcuts,
+  });
+  return classes;
+}
 // await from_file("chunk.html");
 Deno.test("can sort.", async function () {
   const classes = [
@@ -75,6 +89,7 @@ Deno.test("can sort.", async function () {
     ["28818e", "rounded"],
   ];
   assertEquals(await from_file("chunk.html", true, undefined), classes);
+  assertEquals(await from_file_sync("chunk.html", true, undefined), classes);
 });
 
 Deno.test("can put a naming procedure.", async function () {
@@ -134,6 +149,10 @@ Deno.test("can put a naming procedure.", async function () {
   ];
 
   assertEquals(await from_file("chunk.html", true, () => "named"), classes);
+  assertEquals(
+    await from_file_sync("chunk.html", true, () => "named"),
+    classes,
+  );
 });
 
 Deno.test({
@@ -195,6 +214,7 @@ Deno.test({
       ["28818e", "rounded"],
     ];
     assertEquals(await from_file("chunk_tw.html", true, undefined), html);
+    assertEquals(await from_file_sync("chunk_tw.html", true, undefined), html);
   },
 });
 
@@ -234,4 +254,9 @@ Deno.test("can create windicss shortcuts.", async function () {
   Deno.removeSync(file);
   await from_file("chunk_tw.html", true, undefined, true);
   assertEquals(JSON.parse(Deno.readTextFileSync(file)), json);
+
+  Deno.removeSync(file);
+  await from_file_sync("chunk_tw.html", true, undefined, true);
+  assertEquals(JSON.parse(Deno.readTextFileSync(file)), json);
+  // Deno.removeSync(file);
 });

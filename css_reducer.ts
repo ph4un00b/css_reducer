@@ -8,23 +8,81 @@ import {
   brightRed,
   inverse,
 } from "https://deno.land/std@0.125.0/fmt/colors.ts";
+import { _match_classes, _sort_classes_list } from "./lib.ts";
 
 const te = (s: string) => new TextEncoder().encode(s);
 const td = (d: Uint8Array) => new TextDecoder().decode(d);
-export type Namer = () => string;
+export type Namer = (message?: string) => string;
 type Options = {
   order_default?: boolean;
   order_tailwind?: boolean;
   windi_shortcuts?: boolean;
 };
 
+const _CLASSES_REGEX = /class="\s*([a-z:A-Z\s\-\[\#\d\.\%\]]+)\s*"/g;
+
+export async function css_reducer_sync(
+  html: string,
+  namer: Namer | undefined,
+  { order_default = true, windi_shortcuts = false }: Options = {}
+) {
+  const _DATA_: string[][] = await _matcher_sync(html, order_default, namer);
+  if (windi_shortcuts) {
+    _create_windi_shortcuts(_DATA_);
+    return _DATA_;
+  }
+  return _DATA_;
+  // consaaole.log(html.substring(indexStart));
+}
+
+async function _matcher_sync(
+  html: string,
+  order_default: boolean,
+  namer?: Namer
+) {
+  const FRAME = 300;
+  const _DATA_: string[][] = [];
+  for (const match of _match_classes(html, _CLASSES_REGEX)) {
+    // console.log(">>>>>>>> ",brightRed(match.result))
+    let group = match.result;
+    if (order_default) {
+      group = _sort_classes_list(match.result).join(" ");
+    }
+    const hash: string = await _hash(group);
+    console.clear();
+
+    if (namer) {
+      if (match.start > FRAME) {
+        l(html.substring(match.start - FRAME, match.start));
+      } else {
+        l(html.substring(0, match.start));
+      }
+
+      l(brightGreen(html.substring(match.start, match.end)));
+      l(html.substring(match.end, match.end + FRAME));
+      const name = namer() ?? "";
+
+      _DATA_.push([name, group]);
+    } else {
+      _DATA_.push([hash, group]);
+    }
+  }
+  return _DATA_;
+}
+
+function l(s: string) {
+  Deno.stdout.writeSync(te(s));
+}
+
+// todo improve UX
 export async function css_reducer(
   fileReader: Deno.File,
   namer: Namer | undefined,
-  { order_default = true, windi_shortcuts = false }: Options = {},
+  { order_default = true, windi_shortcuts = false }: Options = {}
 ) {
   let line_buffer = [];
-  const result: string[][] = [];
+  // _NAME_ just to spot quickly the data
+  const _DATA_: string[][] = [];
   let cache: { [key: string]: string } = {};
   const opts = { order_default, windi_shortcuts };
   for await (const line of readLines(fileReader)) {
@@ -35,7 +93,7 @@ export async function css_reducer(
 
       if (match) {
         cache = { ...cache, ...match.cache };
-        result.push(match.data);
+        _DATA_.push(match.data);
         line_buffer = [];
       } else {
         line_buffer.push(line);
@@ -44,7 +102,7 @@ export async function css_reducer(
       match = await _matcher(line, namer, cache, opts);
       if (match) {
         cache = { ...cache, ...match.cache };
-        result.push(match.data);
+        _DATA_.push(match.data);
       } else {
         line_buffer.push(line);
       }
@@ -52,21 +110,20 @@ export async function css_reducer(
   }
 
   if (windi_shortcuts) {
-    _create_windi_shortcuts(result);
-    return result;
+    _create_windi_shortcuts(_DATA_);
+    return _DATA_;
   }
-  return result;
+  return _DATA_;
 }
 
 async function _matcher(
   html: string,
   namer: Namer | undefined,
   cache: { [key: string]: string } = {},
-  { order_default = true }: Options = {},
+  { order_default = true }: Options = {}
 ) {
   // todo: not the best regex I bet
-  const re = /class="\s*([a-z:A-Z\s\-\[\#\d\.\%\]]+)\s*"/g;
-  const css = html.matchAll(re);
+  const css = html.matchAll(_CLASSES_REGEX);
   if (!css) return;
 
   for (let [_match, group] of css) {
@@ -74,31 +131,53 @@ async function _matcher(
       group = _sort_classes_list(group).join(" ");
     }
 
-    const encoded = te(group);
-    const data = await crypto.subtle.digest("SHA-384", encoded);
-    const hash: string = td(he(new Uint8Array(data))).slice(0, 6);
+    const hash: string = await _hash(group);
 
     if (namer) {
-      // todo: do something better for green log
-      const init = html.indexOf(group);
-      const end = html.indexOf('"', html.indexOf(group, +1));
-      if (hash in cache) {
-        console.log(
-          brightRed("Already in shorcuts as: ") + bgBlack(inverse(cache[hash])),
-        );
-      }
-
-      console.log(
-        html.slice(0, init) +
-          brightGreen(html.slice(init, end)) +
-          html.slice(end),
-      );
-      const name = namer();
+      const name = _name(html, group, hash, cache, namer);
       return { data: [name, group], cache: { [hash]: name } };
     } else {
       return { data: [hash, group], cache: { [hash]: group } };
     }
   }
+}
+
+function _name(
+  html: string,
+  group: string,
+  hash: string,
+  cache: { [key: string]: string },
+  namer: Namer
+) {
+  // todo: do something better for green log
+  // _naming_logs(html, group, hash, cache);
+  const name = namer();
+  return name;
+}
+
+function _naming_logs(
+  html: string,
+  group: string,
+  hash: string,
+  cache: { [key: string]: string }
+) {
+  const init = html.indexOf(group);
+  const end = html.indexOf('"', html.indexOf(group, +1));
+  if (hash in cache) {
+    console.log(
+      brightRed("Already in shorcuts as: ") + bgBlack(inverse(cache[hash]))
+    );
+  }
+
+  console.log(
+    html.slice(0, init) + brightGreen(html.slice(init, end)) + html.slice(end)
+  );
+}
+
+async function _hash(group: string) {
+  const data = await crypto.subtle.digest("SHA-384", te(group));
+  const hash: string = td(he(new Uint8Array(data))).slice(0, 6);
+  return hash;
 }
 
 function _create_windi_shortcuts(classes: string[][]) {
@@ -110,135 +189,6 @@ function _create_windi_shortcuts(classes: string[][]) {
 
   Deno.writeTextFileSync(
     path.join(Deno.cwd(), "shortcuts.json"),
-    JSON.stringify(shotcuts, undefined, 2),
+    JSON.stringify(shotcuts, undefined, 2)
   );
-}
-
-// port from tailwind-sorter
-// todo: find out a better structure
-function _classes_from_string(classes: string) {
-  return classes
-    .split(" ")
-    .map((className) => className.trim())
-    .filter(Boolean);
-}
-
-function _sort_classes_list(classes: string[] | string): string[] {
-  const classesArray = typeof classes === "string"
-    ? _classes_from_string(classes)
-    : classes.slice();
-
-  return classesArray.sort((a, b) => {
-    const aParts = _getClassParts(a);
-    // console.log(aParts)
-    const bParts = _getClassParts(b);
-
-    const aClassBaseIndex = _getAllSelectors("components-first").indexOf(
-      aParts.classBase,
-    );
-    const bClassBaseIndex = _getAllSelectors("components-first").indexOf(
-      bParts.classBase,
-    );
-
-    const aHasMediaQuery = Boolean(aParts.mediaQuery) &&
-      ["sm", "md", "lg", "xl"].indexOf(String(aParts.mediaQuery)) !== -1;
-    const bHasMediaQuery = Boolean(bParts.mediaQuery) &&
-      ["sm", "md", "lg", "xl"].indexOf(String(bParts.mediaQuery)) !== -1;
-
-    const aMediaQueryIndex = ["sm", "md", "lg", "xl"].indexOf(
-      String(aParts.mediaQuery),
-    );
-    const bMediaQueryIndex = ["sm", "md", "lg", "xl"].indexOf(
-      String(bParts.mediaQuery),
-    );
-
-    // A or B have unknown selector
-    if (aClassBaseIndex !== -1 && bClassBaseIndex === -1) {
-      // B has unknown class
-      return "start" === "start" ? 1 : -1;
-    }
-    if (aClassBaseIndex === -1 && bClassBaseIndex !== -1) {
-      // A has unknown class
-      return "start" === "start" ? -1 : 1;
-    }
-
-    // Sort by media query
-    if (!aHasMediaQuery && bHasMediaQuery) {
-      return -1;
-    }
-    if (aHasMediaQuery && !bHasMediaQuery) {
-      return 1;
-    }
-
-    // Both or none have MQ at this point
-    if (aHasMediaQuery && bHasMediaQuery) {
-      if (aMediaQueryIndex < bMediaQueryIndex) {
-        return -1;
-      }
-      if (
-        ["sm", "md", "lg", "xl"].indexOf(String(aParts.mediaQuery)) >
-          ["sm", "md", "lg", "xl"].indexOf(String(bParts.mediaQuery))
-      ) {
-        return 1;
-      }
-    }
-
-    // Sort based on sorted selector
-    if (aClassBaseIndex !== -1 && bClassBaseIndex !== -1) {
-      if (aClassBaseIndex < bClassBaseIndex) {
-        return -1;
-      }
-      if (aClassBaseIndex > bClassBaseIndex) {
-        return 1;
-      }
-    }
-
-    return 0;
-  });
-}
-
-interface ClassParts {
-  classBase: string;
-  mediaQuery: string | false;
-}
-
-function _getClassParts(className: string): ClassParts {
-  if (className.indexOf(":") === -1) {
-    return {
-      classBase: className,
-      mediaQuery: false,
-    };
-  }
-
-  const parts = className.split(":");
-  if (parts.length === 1) {
-    return {
-      classBase: parts[0],
-      mediaQuery: false,
-    };
-  }
-
-  return {
-    classBase: parts[1],
-    mediaQuery: parts[0],
-  };
-}
-
-function _getAllSelectors(
-  classes_position: "as-is" | "components-first" | "components-last",
-): string[] {
-  const allSelectors: string[] = [];
-  const allComponentSelectors: string[] = [];
-  const allUtilitySelectors: string[] = [];
-
-  switch (classes_position) {
-    case "as-is":
-      return allSelectors;
-
-    case "components-first":
-      return [...allComponentSelectors, ...allUtilitySelectors];
-
-    case "components-last":
-      return [...allUtilitySelectors, ...allComponentSelectors];
-  }
 }
