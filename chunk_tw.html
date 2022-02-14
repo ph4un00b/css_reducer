@@ -1,0 +1,162 @@
+<body class="bg-rose-500">
+  <!-- <div id="id">0ybFZ2Ab08V8hueghSXm6E</div> -->
+  <!-- <div id="name" class="bg-pink-500">Opeth</div> -->
+  <main class="">
+    <section
+      class="text-light-300 flex flex-row justify-around pb-1 font-mono text-[0.9em]"
+    >
+      <div class="">
+        <kbd
+          class="border-1 inline-block rounded-[3px] border-solid border-[#b4b4b4] bg-[#eee] px-[2px] py-[4px] text-[0.85em] text-[#333] shadow-sm shadow-black"
+          ><code>shift</code></kbd
+        >+<kbd
+          class="border-1 inline-block rounded-[3px] border-solid border-[#b4b4b4] bg-[#eee] px-[2px] py-[4px] text-[0.85em] text-[#333] shadow-sm shadow-black"
+          ><code>tab</code></kbd
+        >
+        backward
+      </div>
+      <div class="">
+        <kbd
+          class="border-1 inline-block rounded-[3px] border-solid border-[#b4b4b4] bg-[#eee] px-[2px] py-[4px] text-[0.85em] text-[#333] shadow-sm shadow-black"
+          ><code>tab</code></kbd
+        >
+        forward
+      </div>
+    </section>
+    <div
+      id="countapp"
+      @vue:mounted="init('ramm')"
+      v-scope="Fuzzy()"
+      class="flex flex-col items-center overflow-hidden text-xl"
+    >
+      <!-- <pre v-effect="$el.textContent = entries"></pre> -->
+      <input
+        ref="main_runner"
+        v-if="program === 'main'"
+        placeholder="Type"
+        class="w-[88%] border-b-2 border-gray-400 py-8 px-3 text-6xl placeholder-purple-500 outline-none focus:border-purple-500"
+        type="text"
+        @input="search"
+      />
+
+      <input
+        ref="runner"
+        v-else
+        placeholder="Type"
+        class="placehol w-[88%] border-b-2 border-gray-400 py-8 px-3 text-6xl placeholder-rose-500 outline-none focus:border-purple-500"
+        type="text"
+        @change="execute"
+      />
+
+      <!-- <pre>program: {{program}}</pre> -->
+      <section class="w-[98%]">
+        <h2
+          @focus="result_selected = false; store.id = undefined"
+          tabindex="0"
+          :class="program === 'main' ? 'text-purple-300' : 'text-rose-200'"
+          v-effect="$el.textContent = `> ${program}`"
+        ></h2>
+        <h1 v-if="program === 'main'">select program</h1>
+        <!-- options -->
+        <div
+          v-show="program === 'main'"
+          tabindex="0"
+          @keyup.enter="handle_enter(item)"
+          v-for="({item, positions}) in entries"
+          class="list-none border-2 border-solid border-rose-400 border-opacity-60 bg-indigo-50 py-4 pl-2"
+        >
+          <!-- <pre v-effect="$el.textContent = item"></pre> -->
+          <!-- highlight -->
+          <span v-for="(char, pos) in item.split('')">
+            <b
+              v-if="positions.includes(pos)"
+              v-effect="$el.textContent = char"
+            ></b>
+            <span v-else v-effect="$el.textContent = char"></span>
+          </span>
+        </div>
+
+        <section v-show="program !== 'main' && !result_selected">
+          <div
+            class="bg-blue-50 p-[8px]"
+            v-for="({name, id, genres, images}) in results"
+          >
+            <section
+              @keyup.enter="store.artist_id = id; result_selected = true"
+              class="focus-within:outline-solid-rose-500 relative cursor-pointer p-1 focus-within:bg-rose-100"
+            >
+              <kbd
+                tabindex="0"
+                class="border-1 absolute top-0 right-0 inline-block rounded-[3px] border-solid border-transparent bg-transparent px-[2px] py-[4px] text-[0.5em] text-transparent shadow-sm shadow-transparent outline-transparent focus:border-[#b4b4b4] focus:bg-[#eee] focus:text-[#333] focus:shadow-black"
+                ><code>enter</code></kbd
+              >
+              <!-- basic info -->
+              <section class="flex flex-row">
+                <img
+                  class="p-1"
+                  :src="images[0]?.url ?? 'https://www.fillmurray.com/g/200/200'"
+                  width="70"
+                  height="70"
+                  alt=""
+                />
+                <section class="flex flex-col justify-around">
+                  <strong>{{name}}</strong>
+                  <i class="text-[0.7em]">{{id}}</i>
+                </section>
+              </section>
+              <!-- genres -->
+              <section class="inline-block" v-for="(genre, idx) in genres">
+                <span
+                  class="ml-2 mr-3 text-[0.8em]"
+                  v-if="idx < 2"
+                  v-effect="$el.textContent = genre"
+                ></span>
+              </section>
+            </section>
+          </div>
+        </section>
+      </section>
+      <!-- <button @click="search('pt')">Increment</button> -->
+    </div>
+
+    <article
+      v-if="store.id"
+      id="artista"
+      class="text-light-100 flex flex-col items-center bg-gray-900"
+    >
+      <h1 v-effect="$el.textContent = store.id"></h1>
+      <h1>{{ store.json.name }}</h1>
+      <div>
+        <img
+          class="rounded"
+          :src="store.json.artist_image.url"
+          width="120"
+          height="120"
+          alt=""
+        />
+      </div>
+
+      <section
+        class="flex flex-col"
+        id="genres"
+        v-for="item of store.json.artist_genres"
+      >
+        <span class="my-3 rounded-md bg-rose-500 py-1.5 px-2 text-sm"
+          >{{ item }}</span
+        >
+      </section>
+
+      <h2>{{ store.json.last_album_name }}</h2>
+      <div>
+        <img
+          class="rounded"
+          :src="store.json.last_album_image.url"
+          width="160"
+          height="160"
+          alt=""
+        />
+      </div>
+    </article>
+  </main>
+  <script type="module" src="main.js"></script>
+</body>

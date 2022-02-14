@@ -1,0 +1,15 @@
+- raw install
+
+deno install --reload -n css_reducer --allow-read https://raw.githubusercontent.com/ph4un00b/css_reducer/master/cli.ts
+
+- usage:
+
+css_reducer page.html --windi
+
+or
+
+css_reducer page.html
+
+- run tests
+
+deno test --allow-write --allow-read . --watch
