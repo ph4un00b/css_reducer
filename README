@@ -1,6 +1,6 @@
 - raw install
 
-deno install --reload -n css_reducer --allow-read https://raw.githubusercontent.com/ph4un00b/css_reducer/master/cli.ts
+deno install --reload -n css_reducer --allow-write --allow-read https://raw.githubusercontent.com/ph4un00b/css_reducer/master/cli.ts
 
 - usage:
 
