@@ -10,15 +10,11 @@ const [file, windi] = Deno.args;
 if (file && windi === "--windi") {
   const filename = path.join(Deno.cwd(), file);
   const html = Deno.readTextFileSync(filename);
-  console.log(await css_reducer_sync(html, ask, { windi_shortcuts: true }));
+  console.log(css_reducer_sync(html, ask, { windi_shortcuts: true }));
 } else if (file) {
   const filename = path.join(Deno.cwd(), file);
   const html = Deno.readTextFileSync(filename);
-  console.log(await css_reducer_sync(html, ask));
-}
-
-async function o(s: string) {
-  await Deno.stdout.write(new TextEncoder().encode(s));
+  console.log(css_reducer_sync(html, ask));
 }
 
 function ask() {
