@@ -8,81 +8,145 @@ import {
   brightRed,
   inverse,
 } from "https://deno.land/std@0.125.0/fmt/colors.ts";
-import { _match_classes, _simple_hash, _sort_classes_list } from "./lib.ts";
+import {
+  _css_classes,
+  _simple_hash,
+  _sort_classes_list,
+  ClassName,
+} from "./lib.ts";
 
-const te = (s: string) => new TextEncoder().encode(s);
-const td = (d: Uint8Array) => new TextDecoder().decode(d);
-export type Namer = (message?: string) => string;
-type Options = {
+function te(s: string) {
+  return new TextEncoder().encode(s);
+}
+function td(d: Uint8Array) {
+  return new TextDecoder().decode(d);
+}
+export type NameCallback = (message?: string) => string;
+type CLIOptions = {
   order_default?: boolean;
   order_tailwind?: boolean;
   windi_shortcuts?: boolean;
   output_file?: string;
+  cb?: NameCallback;
 };
 
-const _CLASSES_REGEX = /class="\s*([a-z:A-Z\s\-\[\#\d\.\%\]]+)\s*"/g;
+const CLASSES_REGEX = /class="\s*([a-z:A-Z\s\-\[\#\d\.\%\]]+)\s*"/g;
 
 export function css_reducer_sync(
   filename: string,
-  namer: Namer | undefined,
-  { order_default = true, windi_shortcuts = false, output_file }: Options = {},
+  options: CLIOptions = {},
 ) {
-  const filepath = path.join(Deno.cwd(), filename);
-  const html = Deno.readTextFileSync(filepath);
-  const result = _matcher_sync(html, order_default, namer);
+  const { order_default = true, windi_shortcuts = false, output_file, cb } =
+    options;
+  const { data, html } = _process(_html(filename), order_default, cb);
 
-  if (output_file) {
-    Deno.writeTextFileSync(output_file, result.html);
-  } else {
-    Deno.writeTextFileSync(filename, result.html);
-  }
+  output_file
+    ? Deno.writeTextFileSync(output_file, html)
+    : Deno.writeTextFileSync(filename, html);
 
-  if (windi_shortcuts) {
-    _create_windi_shortcuts(result.data);
-    return result.data;
-  }
+  windi_shortcuts && _create_windi_shortcuts(data);
 
-  return result.data;
+  return data;
 }
 
-function _matcher_sync(html: string, order_default: boolean, namer?: Namer) {
-  const FRAME = 300;
-  const _DATA_: string[][] = [];
-  let begin_html_pointer = 0;
-  let new_name_class;
-  const new_html: string[] = [];
-  for (const match of _match_classes(html, _CLASSES_REGEX)) {
-    new_html.push(html.substring(begin_html_pointer, match.start));
-    let group = match.result.trim();
+function _html(filename: string) {
+  const filepath = path.join(Deno.cwd(), filename);
+  const html = Deno.readTextFileSync(filepath);
+  return html;
+}
+
+function _process(
+  input_html: string,
+  order_default: boolean,
+  cb?: NameCallback,
+) {
+  const data: string[][] = [];
+  let pointer = 0;
+  const html: string[] = [];
+
+  for (const classname of _css_classes(input_html, CLASSES_REGEX)) {
+    html.push(_chunk_before(input_html, pointer, classname.start));
+
+    let raw_class = classname.result.trim();
     if (order_default) {
-      group = _sort_classes_list(group).join(" ");
+      raw_class = _sort_classes_list(raw_class).join(" ");
     }
 
-    const hash: string = _simple_hash(group);
-    console.clear(); // remove for testing logging
+    cb ? console.clear() : _noop();
+    cb ? _logs(input_html, classname) : _noop();
+    cb
+      ? data.push(_data_from_cb(cb, raw_class))
+      : data.push(_data_with_hash(raw_class));
 
-    if (namer) {
-      if (match.start > FRAME) {
-        l(html.substring(match.start - FRAME, match.start));
-      } else {
-        l(html.substring(0, match.start));
-      }
-
-      l(brightGreen(html.substring(match.start, match.end)));
-      l(html.substring(match.end, match.end + FRAME));
-      new_name_class = namer() ?? "";
-
-      _DATA_.push([new_name_class, group]);
-    } else {
-      _DATA_.push([hash, group]);
-    }
-
-    new_html.push([new_name_class ?? hash].join(" "));
-    begin_html_pointer = match.end;
+    html.push(_chunk_class(raw_class));
+    pointer = classname.end;
   }
-  new_html.push(html.substring(begin_html_pointer));
 
-  return { data: _DATA_, html: new_html.join("") };
+  html.push(_chunk_after(input_html, pointer));
+  return { data, html: html.join("") };
+}
+
+function _chunk_after(input_html: string, pointer: number): string {
+  return input_html.substring(pointer);
+}
+
+function _chunk_class(raw_class: string): string {
+  return [_simple_hash(raw_class)].join(" ");
+}
+
+function _data_with_hash(raw_class: string): string[] {
+  return [_simple_hash(raw_class), raw_class];
+}
+
+function _data_from_cb(cb: NameCallback, raw_class: string): string[] {
+  return [cb() ?? "", raw_class];
+}
+
+function _noop() {
+  return () => {};
+}
+
+function _chunk_before(html: string, from: number, until: number) {
+  return _chunk(html, { from, until });
+}
+function _logs(
+  html: string,
+  classname: { result: string; start: number; end: number },
+) {
+  _log_chunk_before(classname, 300, html);
+  _log_class(html, classname);
+  _log_chunk_after(html, classname, 300);
+}
+
+function _log_chunk_after(
+  html: string,
+  classname: { result: string; start: number; end: number },
+  FRAME: number,
+) {
+  l(_chunk(html, { from: classname.end, until: classname.end + FRAME }));
+}
+
+function _log_class(
+  html: string,
+  classname: { result: string; start: number; end: number },
+) {
+  l(brightGreen(_chunk(html, { from: classname.start, until: classname.end })));
+}
+
+function _log_chunk_before(
+  classname: { result: string; start: number; end: number },
+  FRAME: number,
+  html: string,
+) {
+  if (classname.start > FRAME) {
+    l(_chunk(html, { from: classname.start - FRAME, until: classname.start }));
+  } else {
+    l(_chunk(html, { from: 0, until: classname.start }));
+  }
+}
+
+function _chunk(html: string, chunk: { from: number; until: number }): string {
+  return html.substring(chunk.from, chunk.until);
 }
 
 function l(s: string) {
@@ -92,8 +156,9 @@ function l(s: string) {
 // todo improve UX
 export async function css_reducer(
   fileReader: Deno.File,
-  namer: Namer | undefined,
-  { order_default = true, windi_shortcuts = false, output_file }: Options = {},
+  namer: NameCallback | undefined,
+  { order_default = true, windi_shortcuts = false, output_file }: CLIOptions =
+    {},
 ) {
   let line_buffer = [];
   // _NAME_ just to spot quickly the data
@@ -140,12 +205,12 @@ export async function css_reducer(
 
 function _matcher(
   html: string,
-  namer: Namer | undefined,
+  namer: NameCallback | undefined,
   cache: { [key: string]: string } = {},
-  { order_default = true }: Options = {},
+  { order_default = true }: CLIOptions = {},
 ) {
   // todo: not the best regex I bet
-  const css = html.matchAll(_CLASSES_REGEX);
+  const css = html.matchAll(CLASSES_REGEX);
   if (!css) return;
 
   for (let [_match, group] of css) {
@@ -169,7 +234,7 @@ function _name(
   group: string,
   hash: string,
   cache: { [key: string]: string },
-  namer: Namer,
+  namer: NameCallback,
 ) {
   // todo: do something better for green log
   // _naming_logs(html, group, hash, cache);

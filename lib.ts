@@ -128,8 +128,8 @@ function _getAllSelectors(
 }
 
 // port from windi html parser with some modifications.
-type ClassName = { result: string; start: number; end: number };
-export function _match_classes(html: string, REGEX?: RegExp): ClassName[] {
+export  type ClassName = { result: string; start: number; end: number };
+export function _css_classes(html: string, REGEX?: RegExp): ClassName[] {
   // Match all class properties
   if (!html) return [];
   const output: ClassName[] = [];

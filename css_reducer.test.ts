@@ -1,11 +1,11 @@
 import { assertEquals } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import * as path from "https://deno.land/std@0.125.0/path/mod.ts";
-import { css_reducer, css_reducer_sync, Namer } from "./css_reducer.ts";
+import { css_reducer, css_reducer_sync, NameCallback } from "./css_reducer.ts";
 
 async function from_file(
   filepath: string,
   order_default = false,
-  fn: undefined | Namer = undefined,
+  fn: undefined | NameCallback = undefined,
   windi_shortcuts = false,
 ) {
   const filename = path.join(Deno.cwd(), filepath);
@@ -21,16 +21,16 @@ async function from_file(
 function from_file_sync(
   filename: string,
   order_default = false,
-  fn: undefined | Namer = undefined,
+  cb: undefined | NameCallback = undefined,
   windi_shortcuts = false,
   output_file?: string,
 ) {
-  const classes = css_reducer_sync(filename, fn, {
+  return css_reducer_sync(filename, {
     output_file,
     order_default,
     windi_shortcuts,
+    cb,
   });
-  return classes;
 }
 // await from_file("chunk.html");
 Deno.test("can sort.", async function () {
