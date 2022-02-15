@@ -8,13 +8,9 @@ import {
 const [file, windi] = Deno.args;
 
 if (file && windi === "--windi") {
-  const filename = path.join(Deno.cwd(), file);
-  const html = Deno.readTextFileSync(filename);
-  console.log(css_reducer_sync(html, ask, { windi_shortcuts: true }));
+  console.log(css_reducer_sync(file, ask, { windi_shortcuts: true }));
 } else if (file) {
-  const filename = path.join(Deno.cwd(), file);
-  const html = Deno.readTextFileSync(filename);
-  console.log(css_reducer_sync(html, ask));
+  console.log(css_reducer_sync(file, ask));
 }
 
 function ask() {
