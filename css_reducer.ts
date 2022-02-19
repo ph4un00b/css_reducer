@@ -174,7 +174,7 @@ export async function css_reducer(
       if (match) {
         cache = { ...cache, ...match.cache };
         _DATA_.push(match.data);
-        line_buffer = [];
+        line_buffer.length = 0;
       } else {
         line_buffer.push(line);
       }
