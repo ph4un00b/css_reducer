@@ -4,9 +4,9 @@ import { brightCyan } from "https://deno.land/std@0.125.0/fmt/colors.ts";
 const [file, windi] = Deno.args;
 
 if (file && windi === "--windi") {
-  console.log(css_reducer_sync(file, ask, { windi_shortcuts: true }));
+  console.log(css_reducer_sync(file, { windi_shortcuts: true, cb: ask }));
 } else if (file) {
-  console.log(css_reducer_sync(file, ask));
+  console.log(css_reducer_sync(file, { cb: ask }));
 }
 
 function ask() {
