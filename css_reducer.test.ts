@@ -453,3 +453,125 @@ Deno.test("can rewrite html with callback name", function () {
   });
   assertEquals(Deno.readTextFileSync("test_output.html"), html);
 });
+
+Deno.test("can create a data file", function () {
+  const data = [
+    [
+      "prefix-ke9kl8",
+      "relative grid place-items-center sm:h-screen",
+    ],
+    [
+      "prefix-1bgv7xb",
+      "absolute w-full h-full bg-transparent bg-no-repeat bg-cover",
+    ],
+    [
+      "prefix-1m4gr4w",
+      "sm:w-[26%]",
+    ],
+    [
+      "prefix-1euttdc",
+      "bg-indigo-500 rounded-none pt-1 sm:rounded-lg",
+    ],
+  ];
+
+  Deno.removeSync("test_output.html");
+  Deno.removeSync("styles.json");
+
+  const prefix_callback = function () {
+    return "prefix";
+  };
+
+  css_reducer_sync("test.html", {
+    prefix: prefix_callback,
+    output_file: "test_output.html",
+  });
+
+  assertEquals(
+    JSON.parse(Deno.readTextFileSync("styles.json")),
+    data,
+  );
+});
+
+Deno.test("can unpack styles", function () {
+  const html = `<body class="relative grid place-items-center sm:h-screen">
+    <div id="errors"
+        style=" background: #c00; color: #fff; display: none; margin: -20px -20px 20px; padding: 20px; white-space: pre-wrap; ">
+    </div>
+
+    <div id="jamon" class="absolute w-full h-full bg-transparent bg-no-repeat bg-cover"></div>
+
+    <div class="sm:w-[26%]">
+        {% include "controls.html" %}
+        <main class="bg-indigo-500 rounded-none pt-1 sm:rounded-lg">
+            {% include "inputs.html" %}
+            {% include "output.html" %}
+        </main>
+    </div>
+</body>`;
+
+  const data = { status: "unpacked" };
+
+  const prefix_callback = function () {
+    return "prefix";
+  };
+
+  css_reducer_sync("test_output.html", {
+    prefix: prefix_callback,
+    unpack: true,
+  });
+
+  assertEquals(Deno.readTextFileSync("test_output.html"), html);
+  assertEquals(JSON.parse(Deno.readTextFileSync("styles.json")), data);
+});
+
+Deno.test("can unpack styles from windicss shortcuts", function () {
+  const pre_html = `<body class="prefix-ke9kl8">
+    <div id="errors"
+        style=" background: #c00; color: #fff; display: none; margin: -20px -20px 20px; padding: 20px; white-space: pre-wrap; ">
+    </div>
+
+    <div id="jamon" class="prefix-1bgv7xb"></div>
+
+    <div class="prefix-1m4gr4w">
+        {% include "controls.html" %}
+        <main class="prefix-1euttdc">
+            {% include "inputs.html" %}
+            {% include "output.html" %}
+        </main>
+    </div>
+</body>`;
+
+  const pre_json = {
+    "prefix-ke9kl8": "relative grid place-items-center sm:h-screen",
+    "prefix-1bgv7xb":
+      "absolute w-full h-full bg-transparent bg-no-repeat bg-cover",
+    "prefix-1m4gr4w": "sm:w-[26%]",
+    "prefix-1euttdc": "bg-indigo-500 rounded-none pt-1 sm:rounded-lg",
+  };
+  Deno.writeTextFileSync("test_output.html", pre_html);
+  Deno.writeTextFileSync("shortcuts.json", JSON.stringify(pre_json, null, 2));
+
+  css_reducer_sync("test_output.html", {
+    unpack: true,
+    windi_shortcuts: true
+  });
+
+  const html = `<body class="relative grid place-items-center sm:h-screen">
+    <div id="errors"
+        style=" background: #c00; color: #fff; display: none; margin: -20px -20px 20px; padding: 20px; white-space: pre-wrap; ">
+    </div>
+
+    <div id="jamon" class="absolute w-full h-full bg-transparent bg-no-repeat bg-cover"></div>
+
+    <div class="sm:w-[26%]">
+        {% include "controls.html" %}
+        <main class="bg-indigo-500 rounded-none pt-1 sm:rounded-lg">
+            {% include "inputs.html" %}
+            {% include "output.html" %}
+        </main>
+    </div>
+</body>`;
+
+  assertEquals(Deno.readTextFileSync("test_output.html"), html);
+  assertEquals(JSON.parse(Deno.readTextFileSync("shortcuts.json")), {});
+});

@@ -26,6 +26,7 @@ type CLIOptions = {
   output_file?: string;
   cb?: NameCallback;
   prefix?: PrefixCallback;
+  unpack?: boolean;
 };
 
 const CLASSES_REGEX = /class="\s*([a-z:A-Z\s\-\[\#\d\.\%\]]+)\s*"/g;
@@ -40,16 +41,59 @@ export function css_reducer_sync(
     output_file,
     cb,
     prefix,
+    unpack = false,
   } = options;
-  const { data, html } = _process(_html(filename), order_default, cb, prefix);
 
-  output_file
-    ? Deno.writeTextFileSync(output_file, html)
-    : Deno.writeTextFileSync(filename, html);
+  if (unpack) {
+    let styles_stack;
+    if (windi_shortcuts) {
+      const shortcuts: { [key: string]: string } = JSON.parse(
+        Deno.readTextFileSync("shortcuts.json"),
+      );
 
-  windi_shortcuts && _create_windi_shortcuts(data);
+      styles_stack = Object.entries(shortcuts)
+    } else {
+      styles_stack = JSON.parse(Deno.readTextFileSync("styles.json"));
+    }
 
-  return data;
+    let pointer = 0;
+    const html: string[] = [];
+    const input_html = _html(filename);
+    for (const class_line of _css_classes(input_html, CLASSES_REGEX)) {
+      const before = { from: pointer, until: class_line.start };
+      html.push(_chunk_before(input_html, before));
+
+      for (const [hash, content] of styles_stack) {
+        if (class_line.result === hash) {
+          html.push(content);
+        }
+      }
+
+      pointer = class_line.end;
+    }
+    html.push(_chunk_after(input_html, pointer));
+
+    output_file
+      ? Deno.writeTextFileSync(output_file, html.join(""))
+      : Deno.writeTextFileSync(filename, html.join(""));
+
+    if (windi_shortcuts) {
+      Deno.writeTextFileSync( "shortcuts.json", JSON.stringify({}, null, 2),);
+    } else {
+      Deno.writeTextFileSync( "styles.json", JSON.stringify({ status: "unpacked" }, null, 2),);
+    }
+  } else {
+    const { data, html } = _process(_html(filename), order_default, cb, prefix);
+
+    output_file
+      ? Deno.writeTextFileSync(output_file, html)
+      : Deno.writeTextFileSync(filename, html);
+
+    Deno.writeTextFileSync("styles.json", JSON.stringify(data, null, 2));
+    windi_shortcuts && _create_windi_shortcuts(data);
+
+    return data;
+  }
 }
 
 function _html(filename: string) {
@@ -274,7 +318,7 @@ function _naming_logs(
   const end = html.indexOf('"', html.indexOf(group, +1));
   if (hash in cache) {
     console.log(
-      brightRed("Already in shorcuts as: ") + bgBlack(inverse(cache[hash])),
+      brightRed("Already in shortcuts as: ") + bgBlack(inverse(cache[hash])),
     );
   }
 
