@@ -8,12 +8,7 @@ import {
   brightRed,
   inverse,
 } from "https://deno.land/std@0.125.0/fmt/colors.ts";
-import {
-  _css_classes,
-  _simple_hash,
-  _sort_classes_list,
-  ClassName,
-} from "./lib.ts";
+import { _css_classes, _simple_hash, _sort_classes, ClassName } from "./lib.ts";
 
 function te(s: string) {
   return new TextEncoder().encode(s);
@@ -66,36 +61,39 @@ function _html(filename: string) {
 function _process(
   input_html: string,
   order_default: boolean,
-  cb?: NameCallback,
+  callback?: NameCallback,
   prefix?: PrefixCallback,
 ) {
   let pointer = 0;
   const html: string[] = [];
   const data: string[][] = [];
 
-  for (const classname of _css_classes(input_html, CLASSES_REGEX)) {
-    html.push(_chunk_before(input_html, pointer, classname.start));
+  for (const class_line of _css_classes(input_html, CLASSES_REGEX)) {
+    const before = { from: pointer, until: class_line.start };
+    html.push(_chunk_before(input_html, before));
 
-    let raw_class = classname.result.trim();
+    let raw_classes = class_line.result.trim();
     if (order_default) {
-      raw_class = _sort_classes_list(raw_class).join(" ");
+      raw_classes = _sort_classes(raw_classes).join(" ");
     }
 
-    cb ? console.clear() : _noop();
-    cb ? _logs(input_html, classname) : _noop();
-    cb
-      ? data.push(_data_from_cb(cb, raw_class))
-      : data.push(_data_with_hash(raw_class, prefix));
+    if (callback) {
+      console.clear();
+      _logs(input_html, class_line);
+      data.push(_data_from_cb(callback, raw_classes));
+    } else {
+      data.push(_data_with_hash(raw_classes, prefix));
+    }
 
     if (prefix) {
-      html.push(prefix() + "-" + _chunk_class(raw_class));
-    } else if (cb) {
-      html.push(cb());
+      html.push(prefix() + "-" + _chunk_class(raw_classes));
+    } else if (callback) {
+      html.push(callback());
     } else {
-      html.push(_chunk_class(raw_class));
+      html.push(_chunk_class(raw_classes));
     }
 
-    pointer = classname.end;
+    pointer = class_line.end;
   }
 
   html.push(_chunk_after(input_html, pointer));
@@ -106,65 +104,70 @@ function _chunk_after(input_html: string, pointer: number): string {
   return input_html.substring(pointer);
 }
 
-function _chunk_class(raw_class: string): string {
-  return [_simple_hash(raw_class)].join(" ");
+function _chunk_class(name: string): string {
+  return [_simple_hash(name)].join(" ");
 }
 
-function _data_with_hash(raw_class: string, prefix?: PrefixCallback): string[] {
+function _data_with_hash(name: string, prefix?: PrefixCallback): string[] {
   if (prefix) {
-    return [prefix() + "-" + _simple_hash(raw_class), raw_class];
+    return [prefix() + "-" + _simple_hash(name), name];
   }
-  return [_simple_hash(raw_class), raw_class];
+  return [_simple_hash(name), name];
 }
 
-function _data_from_cb(cb: NameCallback, raw_class: string): string[] {
-  return [cb() ?? "", raw_class];
+function _data_from_cb(cb: NameCallback, name: string): string[] {
+  return [cb() ?? "", name];
 }
 
 function _noop() {
   return () => {};
 }
 
-function _chunk_before(html: string, from: number, until: number) {
-  return _chunk(html, { from, until });
+function _chunk_before(html: string, chunk: Chunk) {
+  return _chunk(html, chunk);
 }
 function _logs(
   html: string,
-  classname: { result: string; start: number; end: number },
+  name: ClassName,
 ) {
-  _log_chunk_before(classname, 300, html);
-  _log_class(html, classname);
-  _log_chunk_after(html, classname, 300);
+  _log_chunk_before(name, 300, html);
+  _log_class(html, name);
+  _log_chunk_after(html, name, 300);
 }
 
 function _log_chunk_after(
   html: string,
-  classname: { result: string; start: number; end: number },
+  name: ClassName,
   FRAME: number,
 ) {
-  l(_chunk(html, { from: classname.end, until: classname.end + FRAME }));
+  const chunk = { from: name.end, until: name.end + FRAME };
+  l(_chunk(html, chunk));
 }
 
 function _log_class(
   html: string,
-  classname: { result: string; start: number; end: number },
+  name: ClassName,
 ) {
-  l(brightGreen(_chunk(html, { from: classname.start, until: classname.end })));
+  const chunk = { from: name.start, until: name.end };
+  l(brightGreen(_chunk(html, chunk)));
 }
 
 function _log_chunk_before(
-  classname: { result: string; start: number; end: number },
+  name: ClassName,
   FRAME: number,
   html: string,
 ) {
-  if (classname.start > FRAME) {
-    l(_chunk(html, { from: classname.start - FRAME, until: classname.start }));
+  if (name.start > FRAME) {
+    const chunk = { from: name.start - FRAME, until: name.start };
+    l(_chunk(html, chunk));
   } else {
-    l(_chunk(html, { from: 0, until: classname.start }));
+    const chunk = { from: 0, until: name.start };
+    l(_chunk(html, chunk));
   }
 }
 
-function _chunk(html: string, chunk: { from: number; until: number }): string {
+type Chunk = { from: number; until: number };
+function _chunk(html: string, chunk: Chunk): string {
   return html.substring(chunk.from, chunk.until);
 }
 
@@ -234,7 +237,7 @@ function _matcher(
 
   for (let [_match, group] of css) {
     if (order_default) {
-      group = _sort_classes_list(group.trim()).join(" ");
+      group = _sort_classes(group.trim()).join(" ");
     }
 
     const hash: string = _simple_hash(group);

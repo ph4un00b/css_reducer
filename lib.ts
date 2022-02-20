@@ -7,7 +7,7 @@ function _classes_from_string(classes: string) {
     .filter(Boolean);
 }
 
-export function _sort_classes_list(classes: string[] | string): string[] {
+export function _sort_classes(classes: string[] | string): string[] {
   const classesArray = typeof classes === "string"
     ? _classes_from_string(classes)
     : classes.slice();
