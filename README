@@ -10,6 +10,14 @@ or
 
 css_reducer page.html
 
+- unpacking styles:
+
+css_reducer page.html --windi --unpack
+
+or
+
+css_reducer page.html --unpack
+
 - run tests
 
 deno test --allow-write --allow-read . --watch
