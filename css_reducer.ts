@@ -22,12 +22,15 @@ function td(d: Uint8Array) {
   return new TextDecoder().decode(d);
 }
 export type NameCallback = (message?: string) => string;
+export type PrefixCallback = () => string;
+
 type CLIOptions = {
   order_default?: boolean;
   order_tailwind?: boolean;
   windi_shortcuts?: boolean;
   output_file?: string;
   cb?: NameCallback;
+  prefix?: PrefixCallback;
 };
 
 const CLASSES_REGEX = /class="\s*([a-z:A-Z\s\-\[\#\d\.\%\]]+)\s*"/g;
@@ -36,9 +39,14 @@ export function css_reducer_sync(
   filename: string,
   options: CLIOptions = {},
 ) {
-  const { order_default = true, windi_shortcuts = false, output_file, cb } =
-    options;
-  const { data, html } = _process(_html(filename), order_default, cb);
+  const {
+    order_default = true,
+    windi_shortcuts = false,
+    output_file,
+    cb,
+    prefix,
+  } = options;
+  const { data, html } = _process(_html(filename), order_default, cb, prefix);
 
   output_file
     ? Deno.writeTextFileSync(output_file, html)
@@ -59,10 +67,11 @@ function _process(
   input_html: string,
   order_default: boolean,
   cb?: NameCallback,
+  prefix?: PrefixCallback,
 ) {
-  const data: string[][] = [];
   let pointer = 0;
   const html: string[] = [];
+  const data: string[][] = [];
 
   for (const classname of _css_classes(input_html, CLASSES_REGEX)) {
     html.push(_chunk_before(input_html, pointer, classname.start));
@@ -76,9 +85,16 @@ function _process(
     cb ? _logs(input_html, classname) : _noop();
     cb
       ? data.push(_data_from_cb(cb, raw_class))
-      : data.push(_data_with_hash(raw_class));
+      : data.push(_data_with_hash(raw_class, prefix));
 
-    html.push(_chunk_class(raw_class));
+    if (prefix) {
+      html.push(prefix() + "-" + _chunk_class(raw_class));
+    } else if (cb) {
+      html.push(cb());
+    } else {
+      html.push(_chunk_class(raw_class));
+    }
+
     pointer = classname.end;
   }
 
@@ -94,7 +110,10 @@ function _chunk_class(raw_class: string): string {
   return [_simple_hash(raw_class)].join(" ");
 }
 
-function _data_with_hash(raw_class: string): string[] {
+function _data_with_hash(raw_class: string, prefix?: PrefixCallback): string[] {
+  if (prefix) {
+    return [prefix() + "-" + _simple_hash(raw_class), raw_class];
+  }
   return [_simple_hash(raw_class), raw_class];
 }
 

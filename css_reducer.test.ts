@@ -365,3 +365,91 @@ Deno.test("can rewrite html file.", function () {
   from_file_sync("chunk.html", true, undefined, true, file);
   assertEquals(Deno.readTextFileSync(file), html);
 });
+
+Deno.test("can return data with a prefix", function () {
+  const data = [
+    [
+      "prefix-ke9kl8",
+      "relative grid place-items-center sm:h-screen",
+    ],
+    [
+      "prefix-1bgv7xb",
+      "absolute w-full h-full bg-transparent bg-no-repeat bg-cover",
+    ],
+    [
+      "prefix-1m4gr4w",
+      "sm:w-[26%]",
+    ],
+    [
+      "prefix-1euttdc",
+      "bg-indigo-500 rounded-none pt-1 sm:rounded-lg",
+    ],
+  ];
+
+  const prefix_callback = function () {
+    return "prefix";
+  };
+  assertEquals(
+    css_reducer_sync("test.html", {
+      prefix: prefix_callback,
+      output_file: "test_output.html",
+    }),
+    data,
+  );
+});
+
+Deno.test("can rewrite html with prefix classes", function () {
+  const html = `<body class="prefix-ke9kl8">
+    <div id="errors"
+        style=" background: #c00; color: #fff; display: none; margin: -20px -20px 20px; padding: 20px; white-space: pre-wrap; ">
+    </div>
+
+    <div id="jamon" class="prefix-1bgv7xb"></div>
+
+    <div class="prefix-1m4gr4w">
+        {% include "controls.html" %}
+        <main class="prefix-1euttdc">
+            {% include "inputs.html" %}
+            {% include "output.html" %}
+        </main>
+    </div>
+</body>`;
+
+  Deno.removeSync("test_output.html");
+  const prefix_callback = function () {
+    return "prefix";
+  };
+  css_reducer_sync("test.html", {
+    prefix: prefix_callback,
+    output_file: "test_output.html",
+  });
+  assertEquals(Deno.readTextFileSync("test_output.html"), html);
+});
+
+Deno.test("can rewrite html with callback name", function () {
+  const html = `<body class="pha">
+    <div id="errors"
+        style=" background: #c00; color: #fff; display: none; margin: -20px -20px 20px; padding: 20px; white-space: pre-wrap; ">
+    </div>
+
+    <div id="jamon" class="pha"></div>
+
+    <div class="pha">
+        {% include "controls.html" %}
+        <main class="pha">
+            {% include "inputs.html" %}
+            {% include "output.html" %}
+        </main>
+    </div>
+</body>`;
+
+  Deno.removeSync("test_output.html");
+  const name_callback = function () {
+    return "pha";
+  };
+  css_reducer_sync("test.html", {
+    cb: name_callback,
+    output_file: "test_output.html",
+  });
+  assertEquals(Deno.readTextFileSync("test_output.html"), html);
+});
