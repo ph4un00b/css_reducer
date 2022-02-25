@@ -14,6 +14,14 @@ import {
   te,
 } from "./lib.ts";
 
+export const fns = {
+  _unpack_for_windi,
+  _unpack,
+  _reduce_for_windi,
+  _reduce,
+  _jp,
+};
+
 export function css_reducer_sync(
   filename: string | undefined,
   options: CLIOptions = {},
@@ -27,21 +35,20 @@ export function css_reducer_sync(
     unpack = false,
     order_default = true,
   } = options;
-
   if (!filename) {
     if (display && windi) {
-      return _jp(_rf(path.join(Deno.cwd(), "shortcuts.json")));
+      return fns._jp(_rf(path.join(Deno.cwd(), "shortcuts.json")));
     } else {
-      return _jp(_rf(path.join(Deno.cwd(), "styles.json")));
+      return fns._jp(_rf(path.join(Deno.cwd(), "styles.json")));
     }
   } else if (unpack && windi) {
-    _unpack_for_windi(filename, output);
+    fns._unpack_for_windi(filename, output);
   } else if (unpack) {
-    _unpack(filename, output);
+    fns._unpack(filename, output);
   } else if (windi) {
-    _reduce_for_windi(filename, order_default, callback, prefix, output);
+    fns._reduce_for_windi(filename, order_default, callback, prefix, output);
   } else {
-    return _reduce(filename, order_default, callback, prefix, output);
+    return fns._reduce(filename, order_default, callback, prefix, output);
   }
 }
 
