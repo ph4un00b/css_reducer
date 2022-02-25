@@ -6,35 +6,21 @@ async function from_file(
   filepath: string,
   order_default = false,
   fn: undefined | NameCallback = undefined,
-  windi_shortcuts = false,
+  windi = false,
 ) {
   const filename = path.join(Deno.cwd(), filepath);
   const fileReader = await Deno.open(filename);
   const classes = await css_reducer(fileReader, fn, {
     order_default,
-    windi_shortcuts,
+    windi,
   });
   Deno.close(fileReader.rid);
   return classes;
 }
 
-function from_file_sync(
-  filename: string,
-  order_default = false,
-  cb: undefined | NameCallback = undefined,
-  windi_shortcuts = false,
-  output_file?: string,
-) {
-  return css_reducer_sync(filename, {
-    output_file,
-    order_default,
-    windi_shortcuts,
-    cb,
-  });
-}
-// await from_file("chunk.html");
 Deno.test("can sort.", async function () {
-  const classes = [
+
+  const expected_data = [
     ["1pwdgta", "bg-rose-500"],
     ["m8onlr", "bg-pink-500"],
     [
@@ -88,15 +74,20 @@ Deno.test("can sort.", async function () {
     ["1yz4ldi", "bg-rose-500 py-1.5 px-2 rounded-md my-3 text-sm"],
     ["112vb5c", "rounded"],
   ];
-  assertEquals(await from_file("chunk.html", true, undefined, false), classes);
+
+  assertEquals(await from_file("chunk.html", true, undefined, false), expected_data);
   assertEquals(
-    from_file_sync("chunk.html", true, undefined, false, "__dev"),
-    classes,
+    css_reducer_sync("chunk.html", {
+      order_default: true,
+      windi: false,
+      output: "__dev",
+    }),
+    expected_data,
   );
 });
 
 Deno.test("can put a naming procedure.", async function () {
-  const classes = [
+  const expected_data = [
     ["named", "bg-rose-500"],
     ["named", "bg-pink-500"],
     [
@@ -151,10 +142,18 @@ Deno.test("can put a naming procedure.", async function () {
     ["named", "rounded"],
   ];
 
-  assertEquals(await from_file("chunk.html", true, () => "named"), classes);
   assertEquals(
-    from_file_sync("chunk.html", true, () => "named", false, "__dev"),
-    classes,
+    await from_file("chunk.html", true, () => "named"),
+    expected_data,
+  );
+  assertEquals(
+    css_reducer_sync("chunk.html", {
+      order_default: true,
+      callback: () => "named",
+      windi: false,
+      output: "__dev",
+    }),
+    expected_data,
   );
 });
 
@@ -162,7 +161,7 @@ Deno.test({
   ignore: true,
   name: "can order the tailwindcss way",
   fn: async function () {
-    const html = [
+    const expected_data = [
       ["a47d9e", "bg-rose-500"],
       ["cddfbc", "bg-pink-500"],
       [
@@ -216,16 +215,23 @@ Deno.test({
       ["afeb01", "my-3 rounded-md bg-rose-500 py-1.5 px-2 text-sm"],
       ["28818e", "rounded"],
     ];
-    assertEquals(await from_file("chunk_tw.html", true, undefined), html);
     assertEquals(
-      from_file_sync("chunk_tw.html", true, undefined, false, "__dev"),
-      html,
+      await from_file("chunk_tw.html", true, undefined),
+      expected_data,
+    );
+    assertEquals(
+      css_reducer_sync("chunk_tw.html", {
+        order_default: true,
+        windi: false,
+        output: "__dev",
+      }),
+      expected_data,
     );
   },
 });
 
 Deno.test("can create windicss shortcuts.", async function () {
-  const json = {
+  const expected_shortcuts = {
     "1pwdgta": "bg-rose-500",
     m8onlr: "bg-pink-500",
     "1n9xcto":
@@ -257,17 +263,23 @@ Deno.test("can create windicss shortcuts.", async function () {
     "4fbogc": "my-3 rounded-md bg-rose-500 py-1.5 px-2 text-sm",
   };
   const file = "shortcuts.json";
-  Deno.removeSync(file);
+  _rm(file);
   await from_file("chunk_tw.html", true, undefined, true);
-  assertEquals(JSON.parse(Deno.readTextFileSync(file)), json);
+  assertEquals(_jp(_rf(file)), expected_shortcuts);
 
-  Deno.removeSync(file);
-  from_file_sync("chunk_tw.html", true, undefined, true, "__dev");
-  assertEquals(JSON.parse(Deno.readTextFileSync(file)), json);
+  _rm(file);
+
+  css_reducer_sync("chunk_tw.html", {
+    order_default: true,
+    windi: true,
+    output: "__dev",
+  });
+
+  assertEquals(_jp(_rf(file)), expected_shortcuts);
 });
 
 Deno.test("can rewrite html file.", function () {
-  const html = `<body class="1pwdgta">
+  const expected_html = `<body class="1pwdgta">
     <!-- <div id="id">0ybFZ2Ab08V8hueghSXm6E</div> -->
     <!-- <div id="name" class="m8onlr">Opeth</div> -->
     <main class="">
@@ -360,14 +372,20 @@ Deno.test("can rewrite html file.", function () {
     <script type="module" src="main.js"></script>
 </body>`;
 
-  const file = "__dev";
-  Deno.removeSync(file);
-  from_file_sync("chunk.html", true, undefined, true, file);
-  assertEquals(Deno.readTextFileSync(file), html);
+  const output = "__dev";
+  _rm(output);
+
+  css_reducer_sync("chunk.html", {
+    order_default: true,
+    windi: true,
+    output,
+  });
+
+  assertEquals(_rf(output), expected_html);
 });
 
-Deno.test("can return data with a prefix", function () {
-  const data = [
+Deno.test("can return css data with a prefix", function () {
+  const expected_data = [
     [
       "prefix-ke9kl8",
       "relative grid place-items-center sm:h-screen",
@@ -386,20 +404,19 @@ Deno.test("can return data with a prefix", function () {
     ],
   ];
 
-  const prefix_callback = function () {
-    return "prefix";
-  };
   assertEquals(
     css_reducer_sync("test.html", {
-      prefix: prefix_callback,
-      output_file: "test_output.html",
+      prefix: function () {
+        return "prefix";
+      },
+      output: "test_output.html",
     }),
-    data,
+    expected_data,
   );
 });
 
 Deno.test("can rewrite html with prefix classes", function () {
-  const html = `<body class="prefix-ke9kl8">
+  const expected_html = `<body class="prefix-ke9kl8">
     <div id="errors"
         style=" background: #c00; color: #fff; display: none; margin: -20px -20px 20px; padding: 20px; white-space: pre-wrap; ">
     </div>
@@ -413,21 +430,22 @@ Deno.test("can rewrite html with prefix classes", function () {
             {% include "output.html" %}
         </main>
     </div>
-</body>`;
+</body>
+`;
 
-  Deno.removeSync("test_output.html");
-  const prefix_callback = function () {
-    return "prefix";
-  };
+  _rm("test_output.html");
+
   css_reducer_sync("test.html", {
-    prefix: prefix_callback,
-    output_file: "test_output.html",
+    prefix: function () {
+      return "prefix";
+    },
+    output: "test_output.html",
   });
-  assertEquals(Deno.readTextFileSync("test_output.html"), html);
+  assertEquals(_rf("test_output.html"), expected_html);
 });
 
 Deno.test("can rewrite html with callback name", function () {
-  const html = `<body class="pha">
+  const expected_html = `<body class="pha">
     <div id="errors"
         style=" background: #c00; color: #fff; display: none; margin: -20px -20px 20px; padding: 20px; white-space: pre-wrap; ">
     </div>
@@ -441,21 +459,22 @@ Deno.test("can rewrite html with callback name", function () {
             {% include "output.html" %}
         </main>
     </div>
-</body>`;
+</body>
+`;
 
-  Deno.removeSync("test_output.html");
-  const name_callback = function () {
-    return "pha";
-  };
+  _rm("test_output.html");
+
   css_reducer_sync("test.html", {
-    cb: name_callback,
-    output_file: "test_output.html",
+    callback: function () {
+      return "pha";
+    },
+    output: "test_output.html",
   });
-  assertEquals(Deno.readTextFileSync("test_output.html"), html);
+  assertEquals(_rf("test_output.html"), expected_html);
 });
 
 Deno.test("can create a data file", function () {
-  const data = [
+  const expected_data = [
     [
       "prefix-ke9kl8",
       "relative grid place-items-center sm:h-screen",
@@ -474,26 +493,22 @@ Deno.test("can create a data file", function () {
     ],
   ];
 
-  Deno.removeSync("test_output.html");
-  Deno.removeSync("styles.json");
-
-  const prefix_callback = function () {
-    return "prefix";
-  };
+  _rm("test_output.html");
+  _rm("styles.json");
 
   css_reducer_sync("test.html", {
-    prefix: prefix_callback,
-    output_file: "test_output.html",
+    prefix: function () {
+      return "prefix";
+    },
+    output: "test_output.html",
   });
 
-  assertEquals(
-    JSON.parse(Deno.readTextFileSync("styles.json")),
-    data,
-  );
+  assertEquals(_jp(_rf("styles.json")), expected_data);
 });
 
 Deno.test("can unpack styles", function () {
-  const html = `<body class="relative grid place-items-center sm:h-screen">
+  const expected_html =
+    `<body class="relative grid place-items-center sm:h-screen">
     <div id="errors"
         style=" background: #c00; color: #fff; display: none; margin: -20px -20px 20px; padding: 20px; white-space: pre-wrap; ">
     </div>
@@ -507,25 +522,22 @@ Deno.test("can unpack styles", function () {
             {% include "output.html" %}
         </main>
     </div>
-</body>`;
-
-  const data = { status: "unpacked" };
-
-  const prefix_callback = function () {
-    return "prefix";
-  };
+</body>
+`;
 
   css_reducer_sync("test_output.html", {
-    prefix: prefix_callback,
+    prefix: function () {
+      return "prefix";
+    },
     unpack: true,
   });
 
-  assertEquals(Deno.readTextFileSync("test_output.html"), html);
-  assertEquals(JSON.parse(Deno.readTextFileSync("styles.json")), data);
+  assertEquals(_rf("test_output.html"), expected_html);
+  assertEquals(_jp(_rf("styles.json")), { status: "unpacked" });
 });
 
 Deno.test("can unpack styles from windicss shortcuts", function () {
-  const pre_html = `<body class="prefix-ke9kl8">
+  const initial_html = `<body class="prefix-ke9kl8">
     <div id="errors"
         style=" background: #c00; color: #fff; display: none; margin: -20px -20px 20px; padding: 20px; white-space: pre-wrap; ">
     </div>
@@ -541,22 +553,24 @@ Deno.test("can unpack styles from windicss shortcuts", function () {
     </div>
 </body>`;
 
-  const pre_json = {
+  const css_data = {
     "prefix-ke9kl8": "relative grid place-items-center sm:h-screen",
     "prefix-1bgv7xb":
       "absolute w-full h-full bg-transparent bg-no-repeat bg-cover",
     "prefix-1m4gr4w": "sm:w-[26%]",
     "prefix-1euttdc": "bg-indigo-500 rounded-none pt-1 sm:rounded-lg",
   };
-  Deno.writeTextFileSync("test_output.html", pre_html);
-  Deno.writeTextFileSync("shortcuts.json", JSON.stringify(pre_json, null, 2));
+
+  _wf("test_output.html", initial_html);
+  _wf("shortcuts.json", _js(css_data));
 
   css_reducer_sync("test_output.html", {
     unpack: true,
-    windi_shortcuts: true
+    windi: true,
   });
 
-  const html = `<body class="relative grid place-items-center sm:h-screen">
+  const expected_html =
+    `<body class="relative grid place-items-center sm:h-screen">
     <div id="errors"
         style=" background: #c00; color: #fff; display: none; margin: -20px -20px 20px; padding: 20px; white-space: pre-wrap; ">
     </div>
@@ -572,6 +586,27 @@ Deno.test("can unpack styles from windicss shortcuts", function () {
     </div>
 </body>`;
 
-  assertEquals(Deno.readTextFileSync("test_output.html"), html);
-  assertEquals(JSON.parse(Deno.readTextFileSync("shortcuts.json")), {});
+  assertEquals(_rf("test_output.html"), expected_html);
+  assertEquals(_jp(_rf("shortcuts.json")), {});
 });
+
+
+function _rf(name: string) {
+  return Deno.readTextFileSync(name);
+}
+
+function _wf(name: string, data: string) {
+  return Deno.writeTextFileSync(name, data);
+}
+
+function _rm(name: string) {
+  Deno.removeSync(name);
+}
+
+function _jp(name: string) {
+  return JSON.parse(name);
+}
+
+function _js(data: unknown) {
+  return JSON.stringify(data, undefined, 2);
+}

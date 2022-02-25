@@ -22,9 +22,9 @@ export type PrefixCallback = () => string;
 type CLIOptions = {
   order_default?: boolean;
   order_tailwind?: boolean;
-  windi_shortcuts?: boolean;
-  output_file?: string;
-  cb?: NameCallback;
+  windi?: boolean;
+  output?: string;
+  callback?: NameCallback;
   prefix?: PrefixCallback;
   unpack?: boolean;
 };
@@ -37,21 +37,21 @@ export function css_reducer_sync(
 ) {
   const {
     order_default = true,
-    windi_shortcuts = false,
-    output_file,
-    cb,
+    windi = false,
+    output,
+    callback,
     prefix,
     unpack = false,
   } = options;
 
   if (unpack) {
     let styles_stack;
-    if (windi_shortcuts) {
+    if (windi) {
       const shortcuts: { [key: string]: string } = JSON.parse(
         Deno.readTextFileSync("shortcuts.json"),
       );
 
-      styles_stack = Object.entries(shortcuts)
+      styles_stack = Object.entries(shortcuts);
     } else {
       styles_stack = JSON.parse(Deno.readTextFileSync("styles.json"));
     }
@@ -73,24 +73,32 @@ export function css_reducer_sync(
     }
     html.push(_chunk_after(input_html, pointer));
 
-    output_file
-      ? Deno.writeTextFileSync(output_file, html.join(""))
+    output
+      ? Deno.writeTextFileSync(output, html.join(""))
       : Deno.writeTextFileSync(filename, html.join(""));
 
-    if (windi_shortcuts) {
-      Deno.writeTextFileSync( "shortcuts.json", JSON.stringify({}, null, 2),);
+    if (windi) {
+      Deno.writeTextFileSync("shortcuts.json", JSON.stringify({}, null, 2));
     } else {
-      Deno.writeTextFileSync( "styles.json", JSON.stringify({ status: "unpacked" }, null, 2),);
+      Deno.writeTextFileSync(
+        "styles.json",
+        JSON.stringify({ status: "unpacked" }, null, 2),
+      );
     }
   } else {
-    const { data, html } = _process(_html(filename), order_default, cb, prefix);
+    const { data, html } = _process(
+      _html(filename),
+      order_default,
+      callback,
+      prefix,
+    );
 
-    output_file
-      ? Deno.writeTextFileSync(output_file, html)
+    output
+      ? Deno.writeTextFileSync(output, html)
       : Deno.writeTextFileSync(filename, html);
 
     Deno.writeTextFileSync("styles.json", JSON.stringify(data, null, 2));
-    windi_shortcuts && _create_windi_shortcuts(data);
+    windi && _create_windi_shortcuts(data);
 
     return data;
   }
@@ -223,14 +231,13 @@ function l(s: string) {
 export async function css_reducer(
   fileReader: Deno.File,
   namer: NameCallback | undefined,
-  { order_default = true, windi_shortcuts = false, output_file }: CLIOptions =
-    {},
+  { order_default = true, windi = false, output }: CLIOptions = {},
 ) {
   let line_buffer = [];
   // _NAME_ just to spot quickly the data
   const _DATA_: string[][] = [];
   let cache: { [key: string]: string } = {};
-  const opts = { order_default, windi_shortcuts };
+  const opts = { order_default, windi };
   for await (const line of readLines(fileReader)) {
     let match;
     if (line_buffer.length > 0) {
@@ -256,13 +263,13 @@ export async function css_reducer(
   }
 
   // todo
-  if (output_file) {
+  if (output) {
     // Deno.writeTextFileSync(output_file, result.html);
   } else {
     // Deno.writeTextFileSync(filename, result.html);
   }
 
-  if (windi_shortcuts) {
+  if (windi) {
     _create_windi_shortcuts(_DATA_);
     return _DATA_;
   }
