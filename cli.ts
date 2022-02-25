@@ -4,12 +4,12 @@ import { brightCyan } from "https://deno.land/std@0.125.0/fmt/colors.ts";
 const [file, ...opts] = Deno.args;
 
 if (file && opts.includes("--windi") && opts.includes("--unpack")) {
-  console.log(css_reducer_sync(file, { unpack: true, windi_shortcuts: true }));
+  console.log(css_reducer_sync(file, { unpack: true, windi: true }));
 } else if (file && opts.includes("--unpack")) {
   console.log(css_reducer_sync(file, { unpack: true }));
 } else if (file && opts.includes("--windi")) {
-  console.log(css_reducer_sync(file, { windi_shortcuts: true, cb: ask }));
-} else if (file) console.log(css_reducer_sync(file, { cb: ask }));
+  console.log(css_reducer_sync(file, { windi: true, callback: ask }));
+} else if (file) console.log(css_reducer_sync(file, { callback: ask }));
 
 function ask() {
   const name = prompt(brightCyan("\nRefactor as: "));
