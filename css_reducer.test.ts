@@ -1,11 +1,13 @@
 import { assertEquals } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import * as path from "https://deno.land/std@0.125.0/path/mod.ts";
-import { css_reducer, css_reducer_sync, NameCallback } from "./css_reducer.ts";
+import { css_reducer_sync } from "./css_reducer.ts";
+import { NameCallback } from "./lib.ts";
+import { css_reducer } from "./async.ts";
 
 async function from_file(
   filepath: string,
   order_default = false,
-  fn: undefined | NameCallback = undefined,
+  fn?: NameCallback,
   windi = false,
 ) {
   const filename = path.join(Deno.cwd(), filepath);
@@ -19,7 +21,6 @@ async function from_file(
 }
 
 Deno.test("can sort.", async function () {
-
   const expected_data = [
     ["1pwdgta", "bg-rose-500"],
     ["m8onlr", "bg-pink-500"],
@@ -75,7 +76,10 @@ Deno.test("can sort.", async function () {
     ["112vb5c", "rounded"],
   ];
 
-  assertEquals(await from_file("chunk.html", true, undefined, false), expected_data);
+  assertEquals(
+    await from_file("chunk.html", true, undefined, false),
+    expected_data,
+  );
   assertEquals(
     css_reducer_sync("chunk.html", {
       order_default: true,
@@ -589,7 +593,6 @@ Deno.test("can unpack styles from windicss shortcuts", function () {
   assertEquals(_rf("test_output.html"), expected_html);
   assertEquals(_jp(_rf("shortcuts.json")), {});
 });
-
 
 function _rf(name: string) {
   return Deno.readTextFileSync(name);

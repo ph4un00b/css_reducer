@@ -1,3 +1,27 @@
+import * as path from "https://deno.land/std@0.125.0/path/mod.ts";
+
+export type NameCallback = (message?: string) => string;
+export type PrefixCallback = () => string;
+export type CLIOptions = {
+  order_default?: boolean;
+  order_tailwind?: boolean;
+  windi?: boolean;
+  output?: string;
+  callback?: NameCallback;
+  prefix?: PrefixCallback;
+  unpack?: boolean;
+};
+
+export const CLASSES_REGEX = /class="\s*([a-z:A-Z\s\-\[\#\d\.\%\]]+)\s*"/g;
+
+export function te(s: string) {
+  return new TextEncoder().encode(s);
+}
+
+export function td(d: Uint8Array) {
+  return new TextDecoder().decode(d);
+}
+
 // port from tailwind-sorter
 // todo: find out a better structure
 function _classes_from_string(classes: string) {
@@ -5,6 +29,19 @@ function _classes_from_string(classes: string) {
     .split(" ")
     .map((className) => className.trim())
     .filter(Boolean);
+}
+
+export function _create_windi_shortcuts(classes: string[][]) {
+  const shotcuts: { [key: string]: string } = {};
+
+  for (const [hash, string] of classes) {
+    shotcuts[hash] = string;
+  }
+
+  Deno.writeTextFileSync(
+    path.join(Deno.cwd(), "shortcuts.json"),
+    JSON.stringify(shotcuts, undefined, 2),
+  );
 }
 
 export function _sort_classes(classes: string[] | string): string[] {
@@ -128,7 +165,7 @@ function _getAllSelectors(
 }
 
 // port from windi html parser with some modifications.
-export  type ClassName = { result: string; start: number; end: number };
+export type ClassName = { result: string; start: number; end: number };
 export function _css_classes(html: string, REGEX?: RegExp): ClassName[] {
   // Match all class properties
   if (!html) return [];
