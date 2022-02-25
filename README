@@ -18,6 +18,13 @@ or
 
 css_reducer page.html --unpack
 
+- display current shortcuts:
+
+css_reducer --display
+
+or
+
+css_reducer --display --windi
 - run tests
 
 deno test --allow-write --allow-read . --watch
