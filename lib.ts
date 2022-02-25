@@ -10,6 +10,7 @@ export type CLIOptions = {
   callback?: NameCallback;
   prefix?: PrefixCallback;
   unpack?: boolean;
+  display?: boolean;
 };
 
 export const CLASSES_REGEX = /class="\s*([a-z:A-Z\s\-\[\#\d\.\%\]]+)\s*"/g;

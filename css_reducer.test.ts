@@ -1,6 +1,6 @@
 import { assertEquals } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import * as path from "https://deno.land/std@0.125.0/path/mod.ts";
-import { css_reducer_sync, _jp, _js, _rf, _rm, _wf } from "./css_reducer.ts";
+import { _jp, _js, _rf, _rm, _wf, css_reducer_sync } from "./css_reducer.ts";
 import { NameCallback } from "./lib.ts";
 import { css_reducer } from "./async.ts";
 
@@ -594,3 +594,91 @@ Deno.test("can unpack styles from windicss shortcuts", function () {
   assertEquals(_jp(_rf("shortcuts.json")), {});
 });
 
+//Deno.test("can unpack a single style", function () {
+//
+//  const initial_html = `<body class="prefix-ke9kl8">
+//    <div id="errors"
+//        style=" background: #c00; color: #fff; display: none; margin: -20px -20px 20px; padding: 20px; white-space: pre-wrap; ">
+//    </div>
+//
+//    <div id="jamon" class="prefix-1bgv7xb"></div>
+//
+//    <div class="prefix-1m4gr4w">
+//        {% include "controls.html" %}
+//        <main class="prefix-1euttdc">
+//            {% include "inputs.html" %}
+//            {% include "output.html" %}
+//        </main>
+//    </div>
+//</body>`;
+//
+//  const css_data = [
+//    [
+//      "prefix-ke9kl8",
+//      "relative grid place-items-center sm:h-screen",
+//    ],
+//    [
+//      "prefix-1bgv7xb",
+//      "absolute w-full h-full bg-transparent bg-no-repeat bg-cover",
+//    ],
+//    [
+//      "prefix-1m4gr4w",
+//      "sm:w-[26%]",
+//    ],
+//    [
+//      "prefix-1euttdc",
+//      "bg-indigo-500 rounded-none pt-1 sm:rounded-lg",
+//    ],
+//  ];
+//
+//  _wf("test_output.html", initial_html);
+//  _wf("shortcuts.json", _js(css_data));
+//
+//  const expeced_html = `<body class="relative grid place-items-center sm:h-screen">
+//    <div id="errors"
+//        style=" background: #c00; color: #fff; display: none; margin: -20px -20px 20px; padding: 20px; white-space: pre-wrap; ">
+//    </div>
+//
+//    <div id="jamon" class="prefix-1bgv7xb"></div>
+//
+//    <div class="prefix-1m4gr4w">
+//        {% include "controls.html" %}
+//        <main class="prefix-1euttdc">
+//            {% include "inputs.html" %}
+//            {% include "output.html" %}
+//        </main>
+//    </div>
+//</body>`;
+//
+//  const expected_data = [
+//    [
+//      "prefix-1bgv7xb",
+//      "absolute w-full h-full bg-transparent bg-no-repeat bg-cover",
+//    ],
+//    [
+//      "prefix-1m4gr4w",
+//      "sm:w-[26%]",
+//    ],
+//    [
+//      "prefix-1euttdc",
+//      "bg-indigo-500 rounded-none pt-1 sm:rounded-lg",
+//    ],
+//  ];
+//
+//  css_reducer_sync("test_output.html", {
+//    unpack: true,
+//  });
+//
+//  assertEquals(_rf("test_output.html"), expeced_html);
+////  assertEquals(_jp(_rf("styles.json")), expected_data);
+//});
+
+Deno.test("can show current css data available", function () {
+  assertEquals(css_reducer_sync(undefined, { display: true }), {
+    status: "unpacked",
+  });
+});
+
+Deno.test("can show current shortcuts available", function () {
+  assertEquals(css_reducer_sync(undefined, { display: true, windi: true }), {});
+});

@@ -15,19 +15,26 @@ import {
 } from "./lib.ts";
 
 export function css_reducer_sync(
-  filename: string,
+  filename: string | undefined,
   options: CLIOptions = {},
 ) {
   const {
     output,
     prefix,
     callback,
+    display = false,
     windi = false,
     unpack = false,
     order_default = true,
   } = options;
 
-  if (unpack && windi) {
+  if (!filename) {
+    if (display && windi) {
+      return _jp(_rf(path.join(Deno.cwd(), "shortcuts.json")));
+    } else {
+      return _jp(_rf(path.join(Deno.cwd(), "styles.json")));
+    }
+  } else if (unpack && windi) {
     _unpack_for_windi(filename, output);
   } else if (unpack) {
     _unpack(filename, output);
