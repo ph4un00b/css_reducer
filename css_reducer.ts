@@ -1,5 +1,4 @@
 import * as path from "https://deno.land/std@0.125.0/path/mod.ts";
-
 import { brightGreen } from "https://deno.land/std@0.125.0/fmt/colors.ts";
 
 import {
@@ -20,78 +19,115 @@ export function css_reducer_sync(
   options: CLIOptions = {},
 ) {
   const {
-    order_default = true,
-    windi = false,
     output,
-    callback,
     prefix,
+    callback,
+    windi = false,
     unpack = false,
+    order_default = true,
   } = options;
 
-  if (unpack) {
-    let styles_stack;
-    if (windi) {
-      const shortcuts: { [key: string]: string } = JSON.parse(
-        Deno.readTextFileSync("shortcuts.json"),
-      );
-
-      styles_stack = Object.entries(shortcuts);
-    } else {
-      styles_stack = JSON.parse(Deno.readTextFileSync("styles.json"));
-    }
-
-    let pointer = 0;
-    const html: string[] = [];
-    const input_html = _html(filename);
-    for (const class_line of _css_classes(input_html, CLASSES_REGEX)) {
-      const before = { from: pointer, until: class_line.start };
-      html.push(_chunk_before(input_html, before));
-
-      for (const [hash, content] of styles_stack) {
-        if (class_line.result === hash) {
-          html.push(content);
-        }
-      }
-
-      pointer = class_line.end;
-    }
-    html.push(_chunk_after(input_html, pointer));
-
-    output
-      ? Deno.writeTextFileSync(output, html.join(""))
-      : Deno.writeTextFileSync(filename, html.join(""));
-
-    if (windi) {
-      Deno.writeTextFileSync("shortcuts.json", JSON.stringify({}, null, 2));
-    } else {
-      Deno.writeTextFileSync(
-        "styles.json",
-        JSON.stringify({ status: "unpacked" }, null, 2),
-      );
-    }
+  if (unpack && windi) {
+    _unpack_for_windi(filename, output);
+  } else if (unpack) {
+    _unpack(filename, output);
+  } else if (windi) {
+    _reduce_for_windi(filename, order_default, callback, prefix, output);
   } else {
-    const { data, html } = _process(
-      _html(filename),
-      order_default,
-      callback,
-      prefix,
-    );
-
-    output
-      ? Deno.writeTextFileSync(output, html)
-      : Deno.writeTextFileSync(filename, html);
-
-    Deno.writeTextFileSync("styles.json", JSON.stringify(data, null, 2));
-    windi && _create_windi_shortcuts(data);
-
-    return data;
+    return _reduce(filename, order_default, callback, prefix, output);
   }
+}
+
+function _reduce(
+  filename: string,
+  order_default: boolean,
+  callback: NameCallback | undefined,
+  prefix: PrefixCallback | undefined,
+  output: string | undefined,
+) {
+  const { data, html } = _process(
+    _html(filename),
+    order_default,
+    callback,
+    prefix,
+  );
+
+  output ? _wf(output, html) : _wf(filename, html);
+
+  _wf("styles.json", _js(data));
+
+  return data;
+}
+
+function _reduce_for_windi(
+  filename: string,
+  order_default: boolean,
+  callback: NameCallback | undefined,
+  prefix: PrefixCallback | undefined,
+  output: string | undefined,
+) {
+  const { data, html } = _process(
+    _html(filename),
+    order_default,
+    callback,
+    prefix,
+  );
+
+  output ? _wf(output, html) : _wf(filename, html);
+
+  _create_windi_shortcuts(data);
+}
+
+function _unpack_for_windi(
+  filename: string,
+  output?: string,
+) {
+  const styles_data = Object.entries(_jp(_rf("shortcuts.json")));
+
+  output
+    ? _wf(output, _out_html(filename, styles_data))
+    : _wf(filename, _out_html(filename, styles_data));
+
+  _wf("shortcuts.json", _js({}));
+}
+
+function _unpack(
+  filename: string,
+  output?: string,
+) {
+  const styles_data = _jp(_rf("styles.json"));
+
+  output
+    ? _wf(output, _out_html(filename, styles_data))
+    : _wf(filename, _out_html(filename, styles_data));
+
+  _wf("styles.json", _js({ status: "unpacked" }));
+}
+
+function _out_html(filename: string, styles: any) {
+  let pointer = 0;
+  const in_html = _html(filename);
+  const html_chunks: string[] = [];
+  for (const class_line of _css_classes(in_html, CLASSES_REGEX)) {
+    const chunk_before = _chunk_before(in_html, {
+      from: pointer,
+      until: class_line.start,
+    });
+
+    html_chunks.push(chunk_before);
+    for (const [hash_id, classes] of styles) {
+      if (class_line.result === hash_id) html_chunks.push(classes);
+    }
+    pointer = class_line.end;
+  }
+
+  html_chunks.push(_chunk_after(in_html, pointer));
+  return html_chunks.join("");
 }
 
 function _html(filename: string) {
   const filepath = path.join(Deno.cwd(), filename);
-  const html = Deno.readTextFileSync(filepath);
-  return html;
+  return _rf(filepath);
 }
 
 function _process(
@@ -151,8 +187,11 @@ function _data_with_hash(name: string, prefix?: PrefixCallback): string[] {
   return [_simple_hash(name), name];
 }
 
-function _data_from_cb(cb: NameCallback, name: string): string[] {
-  return [cb() ?? "", name];
+function _data_from_cb(
+  name_from_callback: NameCallback,
+  name: string,
+): string[] {
+  return [name_from_callback() ?? "", name];
 }
 
 function _noop() {
@@ -209,4 +248,24 @@ function _chunk(html: string, chunk: Chunk): string {
 
 function l(s: string) {
   Deno.stdout.writeSync(te(s));
+}
+
+export function _rf(name: string) {
+  return Deno.readTextFileSync(name);
+}
+
+export function _wf(name: string, data: string) {
+  return Deno.writeTextFileSync(name, data);
+}
+
+export function _rm(name: string) {
+  Deno.removeSync(name);
+}
+
+export function _jp(name: string) {
+  return JSON.parse(name);
+}
+
+export function _js(data: unknown) {
+  return JSON.stringify(data, undefined, 2);
 }

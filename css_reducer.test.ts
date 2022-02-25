@@ -1,6 +1,6 @@
 import { assertEquals } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import * as path from "https://deno.land/std@0.125.0/path/mod.ts";
-import { css_reducer_sync } from "./css_reducer.ts";
+import { css_reducer_sync, _jp, _js, _rf, _rm, _wf } from "./css_reducer.ts";
 import { NameCallback } from "./lib.ts";
 import { css_reducer } from "./async.ts";
 
@@ -594,22 +594,3 @@ Deno.test("can unpack styles from windicss shortcuts", function () {
   assertEquals(_jp(_rf("shortcuts.json")), {});
 });
 
-function _rf(name: string) {
-  return Deno.readTextFileSync(name);
-}
-
-function _wf(name: string, data: string) {
-  return Deno.writeTextFileSync(name, data);
-}
-
-function _rm(name: string) {
-  Deno.removeSync(name);
-}
-
-function _jp(name: string) {
-  return JSON.parse(name);
-}
-
-function _js(data: unknown) {
-  return JSON.stringify(data, undefined, 2);
-}
