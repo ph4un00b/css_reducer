@@ -166,15 +166,24 @@ function _process(
     if (callback) {
       console.clear();
       _logs(input_html, class_line);
-      data.push(_data_from_cb(callback, raw_classes));
+    }
+
+    const name_from_callback = callback?.();
+    if (name_from_callback) {
+      data.push([name_from_callback, raw_classes]);
+    } else if (prefix) {
+      data.push([
+        prefix() + "-" + _simple_hash(raw_classes),
+        raw_classes,
+      ]);
     } else {
-      data.push(_data_with_hash(raw_classes, prefix));
+      data.push([_simple_hash(raw_classes), raw_classes]);
     }
 
     if (prefix) {
       html.push(prefix() + "-" + _chunk_class(raw_classes));
-    } else if (callback) {
-      html.push(callback());
+    } else if (name_from_callback) {
+      html.push(name_from_callback);
     } else {
       html.push(_chunk_class(raw_classes));
     }
@@ -192,20 +201,6 @@ function _chunk_after(input_html: string, pointer: number): string {
 
 function _chunk_class(name: string): string {
   return [_simple_hash(name)].join(" ");
-}
-
-function _data_with_hash(name: string, prefix?: PrefixCallback): string[] {
-  if (prefix) {
-    return [prefix() + "-" + _simple_hash(name), name];
-  }
-  return [_simple_hash(name), name];
-}
-
-function _data_from_cb(
-  name_from_callback: NameCallback,
-  name: string,
-): string[] {
-  return [name_from_callback() ?? "", name];
 }
 
 function _noop() {

@@ -1,5 +1,7 @@
 import { assertEquals } from "https://deno.land/std@0.125.0/testing/asserts.ts";
 import * as path from "https://deno.land/std@0.125.0/path/mod.ts";
+import { default as sinon } from "https://cdn.skypack.dev/sinon@13.0.1?dts";
+
 import { _jp, _js, _rf, _rm, _wf, css_reducer_sync } from "./css_reducer.ts";
 import { NameCallback } from "./lib.ts";
 import { css_reducer } from "./async.ts";
@@ -90,75 +92,39 @@ Deno.test("can sort.", async function () {
   );
 });
 
-Deno.test("can put a naming procedure.", async function () {
-  const expected_data = [
-    ["named", "bg-rose-500"],
-    ["named", "bg-pink-500"],
+Deno.test("can put a naming procedure.", function () {
+  const expected_data: string[][] = [
     [
       "named",
-      "text-[0.9em] font-mono text-light-300 flex flex-row justify-around pb-1",
+      "relative grid place-items-center sm:h-screen",
     ],
     [
       "named",
-      "text-[#333] inline-block text-[0.85em] px-[2px] py-[4px] bg-[#eee] rounded-[3px] border-solid border-1 shadow-sm shadow-black border-[#b4b4b4]",
+      "absolute w-full h-full bg-transparent bg-no-repeat bg-cover",
     ],
     [
       "named",
-      "text-[#333] inline-block text-[0.85em] px-[2px] py-[4px] bg-[#eee] rounded-[3px] border-solid border-1 shadow-sm shadow-black border-[#b4b4b4]",
+      "sm:w-[26%]",
     ],
     [
       "named",
-      "text-[#333] inline-block text-[0.85em] px-[2px] py-[4px] bg-[#eee] rounded-[3px] border-solid border-1 shadow-sm shadow-black border-[#b4b4b4]",
+      "bg-indigo-500 rounded-none pt-1 sm:rounded-lg",
     ],
-    ["named", "overflow-hidden text-xl flex flex-col items-center"],
-    [
-      "named",
-      "placeholder-purple-500 text-6xl py-8 px-3 w-[88%] border-b-2 border-gray-400 outline-none focus:border-purple-500",
-    ],
-    [
-      "named",
-      "placehol placeholder-rose-500 text-6xl py-8 px-3 w-[88%] border-b-2 border-gray-400 outline-none focus:border-purple-500",
-    ],
-    ["named", "w-[98%]"],
-    [
-      "named",
-      "bg-indigo-50 border-solid border-2 py-4 pl-2 border-rose-400 border-opacity-60 list-none",
-    ],
-    ["named", "bg-blue-50 p-[8px]"],
-    [
-      "named",
-      "relative cursor-pointer p-1 focus-within:bg-rose-100 focus-within:outline-solid-rose-500",
-    ],
-    [
-      "named",
-      "outline-transparent absolute top-0 right-0 text-[0.5em] text-transparent inline-block px-[2px] py-[4px] bg-transparent rounded-[3px] border-solid border-1 shadow-sm shadow-transparent border-transparent focus:border-[#b4b4b4] focus:text-[#333] focus:bg-[#eee] focus:shadow-black",
-    ],
-    ["named", "flex flex-row"],
-    ["named", "p-1"],
-    ["named", "flex flex-col justify-around"],
-    ["named", "text-[0.7em]"],
-    ["named", "inline-block"],
-    ["named", "ml-2 mr-3 text-[0.8em]"],
-    ["named", "bg-gray-900 text-light-100 flex flex-col items-center"],
-    ["named", "rounded"],
-    ["named", "flex flex-col"],
-    ["named", "bg-rose-500 py-1.5 px-2 rounded-md my-3 text-sm"],
-    ["named", "rounded"],
   ];
 
+  const callback = sinon.fake.returns("named");
+
   assertEquals(
-    await from_file("chunk.html", true, () => "named"),
-    expected_data,
-  );
-  assertEquals(
-    css_reducer_sync("chunk.html", {
+    css_reducer_sync("test.html", {
       order_default: true,
-      callback: () => "named",
+      callback,
       windi: false,
       output: "__dev",
     }),
     expected_data,
   );
+
+  assertEquals(callback.getCalls().length, 4);
 });
 
 Deno.test({
