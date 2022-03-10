@@ -110,6 +110,10 @@ Deno.test("can put a naming procedure.", function () {
       "named",
       "bg-indigo-500 rounded-none pt-1 sm:rounded-lg",
     ],
+    [
+      "named",
+      "text-[#58a4e0] pb-[1em] underline decoration-gray-900/40"
+    ]
   ];
 
   const callback = sinon.fake.returns("named");
@@ -124,7 +128,7 @@ Deno.test("can put a naming procedure.", function () {
     expected_data,
   );
 
-  assertEquals(callback.getCalls().length, 4);
+  assertEquals(callback.getCalls().length, 5);
 });
 
 Deno.test({
@@ -372,6 +376,10 @@ Deno.test("can return css data with a prefix", function () {
       "prefix-1euttdc",
       "bg-indigo-500 rounded-none pt-1 sm:rounded-lg",
     ],
+    [
+      "prefix-1qg7e4i",
+      "text-[#58a4e0] pb-[1em] underline decoration-gray-900/40"
+    ]
   ];
 
   assertEquals(
@@ -400,8 +408,12 @@ Deno.test("can rewrite html with prefix classes", function () {
             {% include "output.html" %}
         </main>
     </div>
-</body>
-`;
+    <a href="#"
+        class="prefix-1qg7e4i">
+        or View available boxes
+    </a>
+
+</body>`;
 
   _rm("test_output.html");
 
@@ -429,8 +441,12 @@ Deno.test("can rewrite html with callback name", function () {
             {% include "output.html" %}
         </main>
     </div>
-</body>
-`;
+    <a href="#"
+        class="pha">
+        or View available boxes
+    </a>
+
+</body>`;
 
   _rm("test_output.html");
 
@@ -461,6 +477,10 @@ Deno.test("can create a data file", function () {
       "prefix-1euttdc",
       "bg-indigo-500 rounded-none pt-1 sm:rounded-lg",
     ],
+    [
+      "prefix-1qg7e4i",
+      "text-[#58a4e0] pb-[1em] underline decoration-gray-900/40"
+    ]
   ];
 
   _rm("test_output.html");
@@ -492,8 +512,12 @@ Deno.test("can unpack styles", function () {
             {% include "output.html" %}
         </main>
     </div>
-</body>
-`;
+    <a href="#"
+        class="text-[#58a4e0] pb-[1em] underline decoration-gray-900/40">
+        or View available boxes
+    </a>
+
+</body>`;
 
   css_reducer_sync("test_output.html", {
     prefix: function () {

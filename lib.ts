@@ -13,7 +13,7 @@ export type CLIOptions = {
   display?: boolean;
 };
 
-export const CLASSES_REGEX = /class="\s*([a-z:A-Z\s\-\[\#\d\.\%\]]+)\s*"/g;
+export const CLASSES_REGEX = /class="\s*([a-z:A-Z\s\-\[\#\d\.\%\]\/]+)\s*"/g;
 
 export function te(s: string) {
   return new TextEncoder().encode(s);
